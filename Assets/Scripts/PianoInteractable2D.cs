@@ -44,7 +44,6 @@ public class PianoInteractable2D : Interactable
         if (miniGame != null)
         {
             miniGame.StartGame();
-            EnergyManager.Instance.StartDrainingEnergy();
         }
     }
 
@@ -52,7 +51,6 @@ public class PianoInteractable2D : Interactable
     {
         // Возвращаемся в основную сцену
         SceneManager.LoadScene("MainScene");
-        EnergyManager.Instance.StopDrainingEnergy();
         StopInteracting();
     }
 }

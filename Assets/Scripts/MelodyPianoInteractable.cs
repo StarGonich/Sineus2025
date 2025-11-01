@@ -16,9 +16,6 @@ public class MelodyPianoInteractable : Interactable
 
         base.Interact();
 
-        // Начинаем тратить энергию
-        EnergyManager.Instance.StartDrainingEnergy();
-
         // Переходим в сцену мини-игры
         SceneManager.LoadScene(melodySceneName);
     }
@@ -30,7 +27,6 @@ public class MelodyPianoInteractable : Interactable
 
     public override void EndMiniGame()
     {
-        EnergyManager.Instance.StopDrainingEnergy();
         StopInteracting();
     }
 }

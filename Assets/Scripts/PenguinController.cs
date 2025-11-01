@@ -3,18 +3,27 @@ using UnityEngine;
 public class PenguinController : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float moveSpeed = 50f;
-    public float rotationSpeed = 10f;
-    public float cameraRotationSpeed = 2f;
-    public float stoppingPower = 10f; // Сила остановки
+    public float walkSpeed = 15f;
+    public float runSpeed = 15f;
+    public float rotationSpeed = 15f;
+    public float acceleration = 10f;
+    public float deceleration = 15f;
 
-    [Header("References")]
+    [Header("Camera Settings")]
     public Transform cameraPivot;
     public Camera playerCamera;
+    public float cameraRotationSpeed = 2f;
+    public float cameraDistance = 5f;
+    public float minCameraAngle = -30f;
+    public float maxCameraAngle = 60f;
+ 
+    
+    [Header("References")]
     public Transform pianoSpot;
 
     private Rigidbody rb;
     private Vector3 movement;
+    private Vector3 currentVelocity;
     private float mouseX;
     private float mouseY;
     private float xRotation = 0f;
@@ -23,19 +32,26 @@ public class PenguinController : MonoBehaviour
     private bool isMoving = false;
     private bool isInteracting = false;
     private Interactable currentInteractable;
+    private bool isRunning = false;
 
-    [Header("Camera Settings")]
-    public float cameraDistance = 20f;
-    public float minCameraAngle = -30f;
-    public float maxCameraAngle = 60f;
+    public static PenguinController Instance;
+
+    private Animator animator;
+    private float currentSpeed = 0f;
+
+    void Awake()
+    {
+        Instance = this;
+    }
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>(); // ПОЛУЧАЕМ АНИМАТОР
 
-        // Настраиваем Rigidbody для предотвращения скольжения
-        rb.drag = 5f; // Сопротивление движению
-        rb.angularDrag = 5f; // Сопротивление вращению
+        // Настройка Rigidbody
+        rb.drag = 0f;
+        rb.angularDrag = 0f;
 
         // Автоматическое создание камеры если не назначена
         if (cameraPivot == null)
@@ -53,7 +69,7 @@ public class PenguinController : MonoBehaviour
         // Создаем pivot для камеры
         GameObject pivotObj = new GameObject("CameraPivot");
         pivotObj.transform.SetParent(transform);
-        pivotObj.transform.localPosition = new Vector3(0, 1.5f, 0);
+        pivotObj.transform.localPosition = new Vector3(0, 0.5f, 0);
         cameraPivot = pivotObj.transform;
 
         // Создаем камеру
@@ -65,8 +81,6 @@ public class PenguinController : MonoBehaviour
 
         // Добавляем обработчик столкновений камеры
         cameraObj.AddComponent<CameraCollisionHandler>();
-
-        Debug.Log("Автоматически создана система камеры");
     }
 
     void Update()
@@ -75,35 +89,79 @@ public class PenguinController : MonoBehaviour
         {
             HandleCameraInput();
             HandleMovementInput();
+            HandleRunningInput();
         }
 
         HandleInteraction();
-
-        // Обработка разблокировки курсора
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            ToggleCursorLock();
-        }
+        UpdateAnimation(); // ОБНОВЛЯЕМ АНИМАЦИЮ
     }
 
     void FixedUpdate()
     {
         if (!isInteracting)
         {
-            if (isMoving)
+            MoveCharacter();
+        }
+    }
+
+    // НОВЫЙ МЕТОД: ОБНОВЛЕНИЕ АНИМАЦИИ
+    void UpdateAnimation()
+    {
+        if (animator == null) return;
+
+        // РАСЧЕТ СКОРОСТИ ДЛЯ АНИМАЦИИ
+        currentSpeed = rb.velocity.magnitude;
+
+        // ПЕРЕДАЕМ ПАРАМЕТРЫ В АНИМАТОР
+        animator.SetFloat("Speed", currentSpeed);
+
+        // Отладочная информация
+        if (currentSpeed > 0.1f)
+        {
+            Debug.Log($"Движение: Speed = {currentSpeed}, IsRunning = {isRunning}");
+        }
+    }
+
+    public void FixMovement(bool fixedState)
+    {
+        isInteracting = fixedState;
+        if (fixedState)
+        {
+            // МГНОВЕННАЯ ОСТАНОВКА
+            movement = Vector3.zero;
+            rb.velocity = Vector3.zero;
+            isMoving = false;
+        }
+        // При false управление автоматически восстановится в Update
+    }
+
+    private bool isCameraFixed = false;
+
+    public void FixCamera(bool fixedState)
+    {
+        isCameraFixed = fixedState;
+
+        if (!fixedState)
+        {
+            // ПРИ РАЗБЛОКИРОВКЕ КАМЕРЫ СБРАСЫВАЕМ ВРАЩЕНИЕ КАМЕРЫ К ЗНАЧЕНИЯМ ПИНГВИНА
+            if (playerCamera != null && cameraPivot != null)
             {
-                MoveCharacter();
-            }
-            else
-            {
-                // Принудительная остановка когда не движемся
-                StopMovement();
+                // Синхронизируем вращение камеры с вращением пингвина
+                yRotation = transform.eulerAngles.y;
+                xRotation = 0f; // Сбрасываем вертикальный наклон
+
+                cameraPivot.rotation = Quaternion.Euler(xRotation, yRotation, 0);
+                playerCamera.transform.localPosition = new Vector3(0, 0, -cameraDistance);
+
+                Debug.Log("Камера восстановлена к настройкам пингвина");
             }
         }
     }
 
     void HandleCameraInput()
     {
+        if (isCameraFixed || isInteracting) return;
+
         if (cameraPivot == null) return;
 
         // Вращение камеры мышью
@@ -134,43 +192,39 @@ public class PenguinController : MonoBehaviour
         Vector3 cameraForward = playerCamera.transform.forward;
         Vector3 cameraRight = playerCamera.transform.right;
 
-        // Игнорируем наклон камеры по Y для движения
+        // Игнорируем наклон камеры по Y
         cameraForward.y = 0;
         cameraRight.y = 0;
         cameraForward.Normalize();
         cameraRight.Normalize();
 
         // Рассчитываем движение относительно камеры
-        movement = (cameraForward * vertical + cameraRight * horizontal).normalized;
+        Vector3 targetMovement = (cameraForward * vertical + cameraRight * horizontal).normalized;
+
+        // Плавное изменение скорости
+        float targetSpeed = isRunning ? runSpeed : walkSpeed;
+        movement = Vector3.SmoothDamp(movement, targetMovement * targetSpeed, ref currentVelocity,
+                                    targetMovement.magnitude > 0.1f ? 1f / acceleration : 1f / deceleration);
 
         isMoving = movement.magnitude > 0.1f;
     }
 
-    void MoveCharacter()
+    void HandleRunningInput()
     {
-        // Движение Rigidbody с помощью AddForce для лучшего контроля
-        Vector3 targetVelocity = movement * moveSpeed;
-        Vector3 velocityChange = targetVelocity - rb.velocity;
-        velocityChange.y = 0; // Не меняем вертикальную скорость
-
-        // Ограничиваем изменение скорости для плавности
-        velocityChange = Vector3.ClampMagnitude(velocityChange, moveSpeed);
-
-        rb.AddForce(velocityChange, ForceMode.VelocityChange);
+        // Бег по зажатому Shift
+        isRunning = Input.GetKey(KeyCode.LeftShift);
     }
 
-    void StopMovement()
+    void MoveCharacter()
     {
-        // Быстрая остановка при отпускании клавиш
-        if (rb.velocity.magnitude > 0.1f)
+        if (isMoving)
         {
-            Vector3 stoppingForce = -rb.velocity * stoppingPower;
-            stoppingForce.y = 0; // Не влияем на вертикальную скорость
-            rb.AddForce(stoppingForce, ForceMode.Acceleration);
+            // Движение с физикой но быстрым откликом
+            rb.velocity = new Vector3(movement.x, rb.velocity.y, movement.z);
         }
         else
         {
-            // Полная остановка если скорость очень мала
+            // Быстрая остановка
             rb.velocity = new Vector3(0, rb.velocity.y, 0);
         }
     }
@@ -186,6 +240,12 @@ public class PenguinController : MonoBehaviour
         {
             StopInteraction();
         }
+
+        // Разблокировка курсора по Tab
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            ToggleCursorLock();
+        }
     }
 
     void StartInteraction(Interactable interactable)
@@ -193,10 +253,7 @@ public class PenguinController : MonoBehaviour
         isInteracting = true;
         movement = Vector3.zero;
         isMoving = false;
-
-        // Останавливаем движение при начале взаимодействия
-        rb.velocity = new Vector3(0, rb.velocity.y, 0);
-        rb.angularVelocity = Vector3.zero;
+        rb.velocity = Vector3.zero;
 
         interactable.Interact();
     }
@@ -207,6 +264,20 @@ public class PenguinController : MonoBehaviour
         if (currentInteractable != null)
         {
             currentInteractable.StopInteracting();
+        }
+    }
+
+    void ToggleCursorLock()
+    {
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
     }
 
@@ -234,17 +305,11 @@ public class PenguinController : MonoBehaviour
     {
         if (pianoSpot != null)
         {
-            // Останавливаем движение перед телепортацией
-            rb.velocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-
-            // Поворачиваемся к пианино
             Vector3 direction = (pianoSpot.position - transform.position).normalized;
             direction.y = 0;
             if (direction != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(direction);
-                // Синхронизируем вращение камеры
                 yRotation = transform.eulerAngles.y;
                 if (cameraPivot != null)
                 {
@@ -253,20 +318,6 @@ public class PenguinController : MonoBehaviour
             }
             transform.position = pianoSpot.position;
             StopInteraction();
-        }
-    }
-
-    void ToggleCursorLock()
-    {
-        if (Cursor.lockState == CursorLockMode.Locked)
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-        else
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
         }
     }
 
