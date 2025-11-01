@@ -12,12 +12,13 @@ public class PenguinController : MonoBehaviour
     [Header("Camera Settings")]
     public Transform cameraPivot;
     public Camera playerCamera;
-    public float cameraRotationSpeed = 2f;
-    public float cameraDistance = 5f;
+    public float cameraRotationSpeed = 3f;
+    public float cameraDistance = 10f;
     public float minCameraAngle = -30f;
     public float maxCameraAngle = 60f;
- 
-    
+    public float cameraSmoothness = 3f; // ДОБАВИЛИ ПЛАВНОСТЬ
+    public float fixedCameraHeight = 1.5f; // ФИКСИРОВАННАЯ ВЫСОТА
+
     [Header("References")]
     public Transform pianoSpot;
 
@@ -34,6 +35,9 @@ public class PenguinController : MonoBehaviour
     private Interactable currentInteractable;
     private bool isRunning = false;
 
+    private Vector3 targetCameraLocalPos;
+    private bool isCameraFixed = false;
+
     public static PenguinController Instance;
 
     private Animator animator;
@@ -47,19 +51,16 @@ public class PenguinController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        animator = GetComponent<Animator>(); // ПОЛУЧАЕМ АНИМАТОР
+        animator = GetComponent<Animator>();
 
-        // Настройка Rigidbody
-        rb.drag = 0f;
-        rb.angularDrag = 0f;
+        // Начальная позиция камеры
+        targetCameraLocalPos = new Vector3(0, 0, -cameraDistance);
 
-        // Автоматическое создание камеры если не назначена
         if (cameraPivot == null)
         {
             CreateCameraRig();
         }
 
-        // Скрываем и фиксируем курсор
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -69,7 +70,7 @@ public class PenguinController : MonoBehaviour
         // Создаем pivot для камеры
         GameObject pivotObj = new GameObject("CameraPivot");
         pivotObj.transform.SetParent(transform);
-        pivotObj.transform.localPosition = new Vector3(0, 0.5f, 0);
+        pivotObj.transform.localPosition = new Vector3(0, fixedCameraHeight, 0); // ФИКСИРОВАННАЯ ВЫСОТА
         cameraPivot = pivotObj.transform;
 
         // Создаем камеру
@@ -79,12 +80,20 @@ public class PenguinController : MonoBehaviour
         playerCamera = cameraObj.AddComponent<Camera>();
         playerCamera.tag = "MainCamera";
 
-        // Добавляем обработчик столкновений камеры
-        cameraObj.AddComponent<CameraCollisionHandler>();
+        // УБИРАЕМ CameraCollisionHandler чтобы не было тряски
+        // cameraObj.AddComponent<CameraCollisionHandler>();
+
+        Debug.Log("Камера создана с фиксированной высотой: " + fixedCameraHeight);
     }
 
     void Update()
     {
+        // Проверяем, не открыто ли UI окно
+        if (GameProgressManager.Instance != null && GameProgressManager.Instance.IsUIOpen())
+        {
+            return; // Не обрабатываем ввод, если открыто UI
+        }
+
         if (!isInteracting)
         {
             HandleCameraInput();
@@ -93,7 +102,22 @@ public class PenguinController : MonoBehaviour
         }
 
         HandleInteraction();
-        UpdateAnimation(); // ОБНОВЛЯЕМ АНИМАЦИЮ
+        UpdateAnimation();
+        UpdateCameraPosition();
+    }
+
+    // НОВЫЙ МЕТОД: ПЛАВНОЕ ОБНОВЛЕНИЕ ПОЗИЦИИ КАМЕРЫ
+    void UpdateCameraPosition()
+    {
+        if (playerCamera != null && cameraPivot != null && !isCameraFixed)
+        {
+            // Плавное движение камеры к целевой позиции
+            playerCamera.transform.localPosition = Vector3.Lerp(
+                playerCamera.transform.localPosition,
+                targetCameraLocalPos,
+                cameraSmoothness * Time.deltaTime
+            );
+        }
     }
 
     void FixedUpdate()
@@ -135,48 +159,76 @@ public class PenguinController : MonoBehaviour
         // При false управление автоматически восстановится в Update
     }
 
-    private bool isCameraFixed = false;
-
     public void FixCamera(bool fixedState)
     {
         isCameraFixed = fixedState;
 
         if (!fixedState)
         {
-            // ПРИ РАЗБЛОКИРОВКЕ КАМЕРЫ СБРАСЫВАЕМ ВРАЩЕНИЕ КАМЕРЫ К ЗНАЧЕНИЯМ ПИНГВИНА
+            // ПРИ РАЗБЛОКИРОВКЕ ВОССТАНАВЛИВАЕМ НОРМАЛЬНЫЕ НАСТРОЙКИ
             if (playerCamera != null && cameraPivot != null)
             {
-                // Синхронизируем вращение камеры с вращением пингвина
-                yRotation = transform.eulerAngles.y;
-                xRotation = 0f; // Сбрасываем вертикальный наклон
+                // Сбрасываем камеру к нормальной позиции
+                targetCameraLocalPos = new Vector3(0, 0, -cameraDistance);
 
-                cameraPivot.rotation = Quaternion.Euler(xRotation, yRotation, 0);
-                playerCamera.transform.localPosition = new Vector3(0, 0, -cameraDistance);
-
-                Debug.Log("Камера восстановлена к настройкам пингвина");
+                // Плавно возвращаем управление
+                StartCoroutine(SmoothCameraReturn());
             }
         }
     }
 
+    System.Collections.IEnumerator SmoothCameraReturn()
+    {
+        float timer = 0f;
+        float returnTime = 0.5f;
+
+        while (timer < returnTime)
+        {
+            timer += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    // В PenguinController.cs добавляем:
+    public void ResetCameraAfterInteraction()
+    {
+        if (cameraPivot != null && playerCamera != null)
+        {
+            // ВОЗВРАЩАЕМ К СТАНДАРТНЫМ НАСТРОЙКАМ
+            cameraPivot.localPosition = new Vector3(0, fixedCameraHeight, 0);
+            playerCamera.transform.localPosition = new Vector3(0, 0, -cameraDistance);
+            cameraPivot.localRotation = Quaternion.Euler(0, yRotation, 0);
+
+            Debug.Log("Камера восстановлена к фиксированной высоте: " + fixedCameraHeight);
+        }
+    }
+
+    // Также обновляем существующий метод:
+    public void ResetCameraToDefault()
+    {
+        ResetCameraAfterInteraction(); // Теперь используем один метод
+    }
+
+    public bool IsCameraFixed
+    {
+        get { return isCameraFixed; }
+    }
+
     void HandleCameraInput()
     {
-        if (isCameraFixed || isInteracting) return;
+        if (isCameraFixed || isInteracting || cameraPivot == null) return;
 
-        if (cameraPivot == null) return;
-
-        // Вращение камеры мышью
+        // ТОЛЬКО ГОРИЗОНТАЛЬНОЕ ВРАЩЕНИЕ
         mouseX = Input.GetAxis("Mouse X") * cameraRotationSpeed;
-        mouseY = Input.GetAxis("Mouse Y") * cameraRotationSpeed;
+        // УБИРАЕМ mouseY - нет вертикального вращения
 
-        // Накопление вращения
+        // Накопление вращения (только по Y)
         yRotation += mouseX;
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, minCameraAngle, maxCameraAngle);
 
-        // Применяем вращение к камере
-        cameraPivot.rotation = Quaternion.Euler(xRotation, yRotation, 0);
+        // Применяем вращение к камере (только по Y)
+        cameraPivot.rotation = Quaternion.Euler(0, yRotation, 0);
 
-        // Персонаж всегда поворачивается в направлении камеры (только по Y)
+        // Персонаж всегда поворачивается в направлении камеры
         transform.rotation = Quaternion.Euler(0, yRotation, 0);
     }
 
@@ -231,6 +283,18 @@ public class PenguinController : MonoBehaviour
 
     void HandleInteraction()
     {
+        if (GameProgressManager.Instance != null && GameProgressManager.Instance.IsUIOpen())
+        {
+            return;
+        }
+
+        // Горячая клавиша для завершения дня (например, Backspace)
+        if (Input.GetKeyDown(KeyCode.Backspace) && !isInteracting)
+        {
+            GameProgressManager.Instance.ShowEndDayPanel();
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.E) && currentInteractable != null && !isInteracting)
         {
             StartInteraction(currentInteractable);
@@ -241,8 +305,7 @@ public class PenguinController : MonoBehaviour
             StopInteraction();
         }
 
-        // Разблокировка курсора по Tab
-        if (Input.GetKeyDown(KeyCode.Tab))
+        if (Input.GetKeyDown(KeyCode.Tab) && !GameProgressManager.Instance.IsUIOpen())
         {
             ToggleCursorLock();
         }

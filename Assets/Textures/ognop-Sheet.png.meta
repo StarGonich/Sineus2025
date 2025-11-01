@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: f2851264b2c184c4b9dc4a487ac0db91
+guid: 9839035c1fa8ec44e95d0832673f154b
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -33,7 +33,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -93,13 +93,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_0
+      name: ognop-Sheet_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -107,20 +107,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 16f83ed7f0a89444eb66228984609546
-      internalID: 1768486716
+      spriteID: af44aae8ac6054b4aa96eb2471e7e935
+      internalID: -1637948387
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_1
+      name: ognop-Sheet_1
       rect:
         serializedVersion: 2
-        x: 61
+        x: 72
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,20 +128,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: e88cc424d07de194da041ef81a3614d7
-      internalID: 1096977419
+      spriteID: 3655f94463d58ee42b32a3e13d48248f
+      internalID: 1004086224
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_2
+      name: ognop-Sheet_2
       rect:
         serializedVersion: 2
-        x: 122
+        x: 144
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -149,20 +149,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: eef724caaa87d9148b2eaa609f2acd3f
-      internalID: -879690915
+      spriteID: 779cef0d46717504ab1e1a43bdd7f775
+      internalID: -2065016290
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_3
+      name: ognop-Sheet_3
       rect:
         serializedVersion: 2
-        x: 183
+        x: 216
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -170,20 +170,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 95b47d26fe6a45d43a86ed02a8827474
-      internalID: 1319550279
+      spriteID: 0c57ddccac744e442ac272e5dbd29385
+      internalID: 520284189
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_4
+      name: ognop-Sheet_4
       rect:
         serializedVersion: 2
-        x: 244
+        x: 288
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -191,20 +191,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7802a1279b994614a9ed73c72dd50efa
-      internalID: -511201614
+      spriteID: ebd2f73b493cf22458c9acf169be08a7
+      internalID: -1255652395
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_5
+      name: ognop-Sheet_5
       rect:
         serializedVersion: 2
-        x: 305
+        x: 360
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -212,20 +212,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9a4173c33dcea6749baa7a4de78d856b
-      internalID: -299978059
+      spriteID: c4017b61610bd8d4fb6413c78e723c45
+      internalID: -1426906191
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_6
+      name: ognop-Sheet_6
       rect:
         serializedVersion: 2
-        x: 366
+        x: 432
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -233,20 +233,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4b8da4b0d39dcda4a9e2db3e1ab6ff2d
-      internalID: 835444466
+      spriteID: b205d62ac568cff40af9abaa1c283bf1
+      internalID: 830340426
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_7
+      name: ognop-Sheet_7
       rect:
         serializedVersion: 2
-        x: 427
+        x: 504
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -254,20 +254,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: c53a38b37af0e5245abf2a30547afe62
-      internalID: -1955342105
+      spriteID: 85b6cd298eb0a0b488d94fbaa895be02
+      internalID: -1871719054
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_8
+      name: ognop-Sheet_8
       rect:
         serializedVersion: 2
-        x: 488
+        x: 576
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -275,20 +275,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a56d1ffb64e1cef4193c0023bb0f12b8
-      internalID: 453682026
+      spriteID: 7aef848cde5da194baf04a6b3edf397b
+      internalID: -228474542
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_9
+      name: ognop-Sheet_9
       rect:
         serializedVersion: 2
-        x: 549
+        x: 648
         y: 0
-        width: 61
-        height: 60
+        width: 72
+        height: 72
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -296,8 +296,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ea0f6207c7004f2498b73dd2359a8509
-      internalID: -2080356100
+      spriteID: b61f894aa2e6c264f8df3f309454a08d
+      internalID: -912604929
       vertices: []
       indices: 
       edges: []
@@ -305,7 +305,7 @@ TextureImporter:
     outline: []
     physicsShape: []
     bones: []
-    spriteID: 139efd1c8a732a94ea94d66b93d9d4fb
+    spriteID: ab80fdde80fb5174993a249cc0219fbd
     internalID: 0
     vertices: []
     indices: 
@@ -313,16 +313,16 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      brr bbr patapim-Sheet_0: 1768486716
-      brr bbr patapim-Sheet_1: 1096977419
-      brr bbr patapim-Sheet_2: -879690915
-      brr bbr patapim-Sheet_3: 1319550279
-      brr bbr patapim-Sheet_4: -511201614
-      brr bbr patapim-Sheet_5: -299978059
-      brr bbr patapim-Sheet_6: 835444466
-      brr bbr patapim-Sheet_7: -1955342105
-      brr bbr patapim-Sheet_8: 453682026
-      brr bbr patapim-Sheet_9: -2080356100
+      ognop-Sheet_0: -1637948387
+      ognop-Sheet_1: 1004086224
+      ognop-Sheet_2: -2065016290
+      ognop-Sheet_3: 520284189
+      ognop-Sheet_4: -1255652395
+      ognop-Sheet_5: -1426906191
+      ognop-Sheet_6: 830340426
+      ognop-Sheet_7: -1871719054
+      ognop-Sheet_8: -228474542
+      ognop-Sheet_9: -912604929
   spritePackingTag: 
   pSDRemoveMatte: 0
   pSDShowRemoveMatteOption: 0

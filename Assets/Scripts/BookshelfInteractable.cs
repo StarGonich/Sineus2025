@@ -10,9 +10,9 @@ public class BookshelfInteractable : InteractiveObject
         attentionGainRate = 2f;
     }
 
-    protected override void EndInteraction()
+    protected override void EndInteractionImmediately()
     {
-        base.EndInteraction();
+        base.EndInteractionImmediately();
         Debug.Log("Чтение книг завершено. Внимание восстановлено!");
     }
 }

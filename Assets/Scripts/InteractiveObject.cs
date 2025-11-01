@@ -6,7 +6,7 @@ public abstract class InteractiveObject : Interactable
     [Header("Interactive Object Settings")]
     public Transform animationSpot;
     public string animationTrigger;
-    public float attentionGainRate = 2f;
+    public float attentionGainRate = 10f;
 
     protected PenguinController penguin;
     protected Animator penguinAnimator;
@@ -15,6 +15,22 @@ public abstract class InteractiveObject : Interactable
 
     public override void Interact()
     {
+        if (EnergyManager.Instance != null && !EnergyManager.Instance.HasEnergy())
+        {
+            Debug.Log("Энергия закончилась! День завершен.");
+            if (GameProgressManager.Instance != null)
+            {
+                GameProgressManager.Instance.ShowEndDayPanel();
+            }
+            return;
+        }
+
+        if (EnergyManager.Instance.GetCurrentAttention() >= EnergyManager.Instance.maxAttention)
+        {
+            Debug.Log("Внимание полностью восстановлено - взаимодействие невозможно");
+            return;
+        }
+
         if (!EnergyManager.Instance.HasEnergy())
         {
             Debug.Log("Слишком устал для этого!");
@@ -30,67 +46,71 @@ public abstract class InteractiveObject : Interactable
         penguin = PenguinController.Instance;
         if (penguin == null) return;
 
-        // СРАЗУ ФИКСИРУЕМ ПЕРСОНАЖА И КАМЕРУ
-        penguin.FixMovement(true);
-        penguin.FixCamera(true);
-
         // СОХРАНЯЕМ ОРИГИНАЛЬНУЮ ПОЗИЦИЮ
         originalPosition = penguin.transform.position;
         originalRotation = penguin.transform.rotation;
 
-        // ТЕЛЕПОРТИРУЕМ ПИНГВИНА В ТОЧКУ АНИМАЦИИ
+        // ТЕЛЕПОРТИРУЕМ ПИНГВИНА
         if (animationSpot != null)
         {
             penguin.transform.position = animationSpot.position;
             penguin.transform.rotation = animationSpot.rotation;
         }
 
-        // НАСТРАИВАЕМ КАМЕРУ
+        // ФИКСИРУЕМ УПРАВЛЕНИЕ
+        penguin.FixMovement(true);
+        penguin.FixCamera(true);
+
+        // НАСТРАИВАЕМ КАМЕРУ (теперь она всегда на одной высоте)
         SetupFixedCamera();
 
-        // ПОЛУЧАЕМ АНИМАТОР И ЗАПУСКАЕМ АНИМАЦИЮ СРАЗУ
+        // ЗАПУСКАЕМ АНИМАЦИЮ
         penguinAnimator = penguin.GetComponent<Animator>();
         if (penguinAnimator != null)
         {
             PlayLoopingAnimation();
         }
-        else
-        {
-            Debug.LogError("Animator не найден на пингвине!");
-        }
 
-        // ЗАПУСКАЕМ ПРОЦЕСС ВЗАИМОДЕЙСТВИЯ
         StartCoroutine(InteractionRoutine());
     }
 
     protected virtual void SetupFixedCamera()
     {
-        if (penguin.playerCamera == null) return;
+        if (penguin.playerCamera == null || animationSpot == null) return;
 
-        // ПРОСТАЯ ФИКСИРОВАННАЯ КАМЕРА СПЕРЕДИ ОТ ПИНГВИНА
-        Vector3 cameraOffset = -penguin.transform.forward * 3f + Vector3.up * 1.5f;
-        penguin.playerCamera.transform.position = penguin.transform.position + cameraOffset;
-        penguin.playerCamera.transform.LookAt(penguin.transform.position + Vector3.up * 1f);
+        float cameraDistance = 4f;
+
+        // КАМЕРА СТОИТ ЗА ПИНГВИНОМ НА ФИКСИРОВАННОЙ ВЫСОТЕ
+        Vector3 cameraOffset = -penguin.transform.forward * cameraDistance;
+
+        // Используем фиксированную высоту из PenguinController
+        Vector3 cameraWorldPos = penguin.transform.position +
+                               new Vector3(0, penguin.fixedCameraHeight, 0) +
+                               cameraOffset;
+
+        penguin.playerCamera.transform.position = cameraWorldPos;
+
+        // СМОТРИМ НА ПИНГВИНА
+        Vector3 lookAtPoint = penguin.transform.position +
+                            new Vector3(0, penguin.fixedCameraHeight * 0.8f, 0);
+
+        penguin.playerCamera.transform.LookAt(lookAtPoint);
     }
 
     protected virtual IEnumerator InteractionRoutine()
     {
         Debug.Log("Начало взаимодействия");
 
-        // НАЧИНАЕМ ВОССТАНАВЛИВАТЬ ВНИМАНИЕ
         EnergyManager.Instance.StartGainingAttention(attentionGainRate);
 
-        // ОСНОВНОЙ ЦИКЛ ВЗАИМОДЕЙСТВИЯ
         while (isInteracting)
         {
-            // ПРОВЕРЯЕМ ВЫХОД ПО ESCAPE
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 Debug.Log("Выход по Escape");
                 break;
             }
 
-            // ПРОВЕРЯЕМ ПОЛНОЕ ВОССТАНОВЛЕНИЕ ВНИМАНИЯ
             if (EnergyManager.Instance.GetCurrentAttention() >= EnergyManager.Instance.maxAttention)
             {
                 Debug.Log("Внимание полностью восстановлено");
@@ -100,8 +120,7 @@ public abstract class InteractiveObject : Interactable
             yield return null;
         }
 
-        // МГНОВЕННОЕ ЗАВЕРШЕНИЕ
-        EndInteraction();
+        EndInteractionImmediately();
     }
 
     protected virtual void PlayLoopingAnimation()
@@ -109,7 +128,7 @@ public abstract class InteractiveObject : Interactable
         if (penguinAnimator != null && !string.IsNullOrEmpty(animationTrigger))
         {
             penguinAnimator.SetBool(animationTrigger, true);
-            Debug.Log($"Анимация запущена: {animationTrigger}");
+            penguinAnimator.Update(0f);
         }
     }
 
@@ -118,32 +137,26 @@ public abstract class InteractiveObject : Interactable
         if (penguinAnimator != null && !string.IsNullOrEmpty(animationTrigger))
         {
             penguinAnimator.SetBool(animationTrigger, false);
-            Debug.Log($"Анимация остановлена: {animationTrigger}");
+            penguinAnimator.Update(0f);
         }
     }
 
-    protected virtual void EndInteraction()
+    protected virtual void EndInteractionImmediately()
     {
-        Debug.Log("Мгновенное завершение взаимодействия");
+        Debug.Log("Завершение взаимодействия");
 
-        // 1. СНАЧАЛА ОСТАНАВЛИВАЕМ АНИМАЦИЮ
         StopAnimationImmediately();
-
-        // 2. ОСТАНАВЛИВАЕМ ВОССТАНОВЛЕНИЕ ВНИМАНИЯ
         EnergyManager.Instance.StopGainingAttention();
 
-        // 3. ВОЗВРАЩАЕМ ПИНГВИНА
         penguin.transform.position = originalPosition;
         penguin.transform.rotation = originalRotation;
 
-        // 4. РАЗБЛОКИРУЕМ УПРАВЛЕНИЕ (КАМЕРА АВТОМАТИЧЕСКИ ВЕРНЕТСЯ)
+        penguin.ResetCameraAfterInteraction();
+
         penguin.FixMovement(false);
         penguin.FixCamera(false);
 
-        // 5. ЗАВЕРШАЕМ ВЗАИМОДЕЙСТВИЕ
         StopInteracting();
-
-        Debug.Log("Взаимодействие полностью завершено");
     }
 
     public override void StartMiniGame()
@@ -153,6 +166,6 @@ public abstract class InteractiveObject : Interactable
 
     public override void EndMiniGame()
     {
-        EndInteraction();
+        EndInteractionImmediately();
     }
 }

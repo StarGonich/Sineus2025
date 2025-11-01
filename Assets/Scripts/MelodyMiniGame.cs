@@ -7,20 +7,13 @@ using UnityEngine.SceneManagement;
 public class MelodyMiniGame : MonoBehaviour
 {
     [Header("Game Settings")]
-    public float noteDisplayTime = 1.5f;
-    public float betweenNotesTime = 0.3f;
-    public float inputTimeLimit = 5f;
+    public float noteDisplayTime = 2f;
+    public float betweenNotesTime = 0.5f;
     public float noteFadeTime = 0.8f;
 
-    [Header("Spawn Area Settings")]
-    [Tooltip("Отступ от левого края в пикселях")]
-    public float spawnLeftMargin = 50f;
-    [Tooltip("Отступ от правого края в пикселях")]
-    public float spawnRightMargin = 50f;
-    [Tooltip("Отступ от верха в пикселях")]
-    public float spawnTopMargin = 150f;
-    [Tooltip("Отступ от низа зоны спавна в пикселях")]
-    public float spawnBottomMargin = 300f;
+    [Header("Note Spawn Area")]
+    public RectTransform noteDisplayArea; // Область для отображения нот
+    public float noteMargin = 20f; // Отступ от краев области
 
     [Header("UI References")]
     public Text sequenceText;
@@ -39,17 +32,24 @@ public class MelodyMiniGame : MonoBehaviour
     public Button keyButtonD;
     public Button keyButtonF;
 
-    [Header("Key Sprites")]
-    public Sprite keyNormalSprite;
-    public Sprite keyPressedSprite;
+    [Header("Individual Key Sprites")]
+    public Sprite keyNormalA;
+    public Sprite keyPressedA;
+    public Sprite keyNormalS;
+    public Sprite keyPressedS;
+    public Sprite keyNormalD;
+    public Sprite keyPressedD;
+    public Sprite keyNormalF;
+    public Sprite keyPressedF;
 
     [Header("Note Display")]
     public GameObject notePrefab;
-    public Transform noteParent;
 
-    [Header("Sprite References")]
-    public Image pianoPanel;
-    public Image mainBackground;
+    [Header("Note Sprites")]
+    public Sprite noteSpriteA;
+    public Sprite noteSpriteS;
+    public Sprite noteSpriteD;
+    public Sprite noteSpriteF;
 
     [Header("Audio Settings")]
     public AudioClip noteSoundA;
@@ -60,9 +60,6 @@ public class MelodyMiniGame : MonoBehaviour
     public AudioClip failSound;
     public float soundVolume = 0.7f;
 
-    [Header("Visual Settings")]
-    public Color keyHighlightColor = new Color(1f, 1f, 0.7f, 1f);
-
     private List<int> currentMelody = new List<int>();
     private List<int> playerInput = new List<int>();
     private int currentScore = 0;
@@ -70,11 +67,14 @@ public class MelodyMiniGame : MonoBehaviour
     private bool isPlayingSequence = false;
     private bool isWaitingForInput = false;
     private AudioSource audioSource;
-    private Color[] keyColors = { Color.red, Color.green, Color.blue, Color.yellow };
-    private List<GameObject> activeNotes = new List<GameObject>();
-    private RectTransform canvasRect;
-    private float canvasWidth;
-    private float canvasHeight;
+    private GameObject currentNote; // Текущая отображаемая нота
+
+    private int currentSequenceLength = 0;
+    private static int savedLevel = 1;
+    private static int savedScore = 0;
+
+    private Dictionary<KeyCode, (int index, Button button)> keyMappings = new Dictionary<KeyCode, (int, Button)>();
+    private Dictionary<int, bool> keyPressedState = new Dictionary<int, bool>();
 
     public static MelodyMiniGame Instance;
 
@@ -86,29 +86,27 @@ public class MelodyMiniGame : MonoBehaviour
     void Start()
     {
         CreateAudioSource();
-        SetupCamera();
         AutoAssignReferences();
-        SetupCanvasInfo();
         SetupKeyButtons();
+        SetupKeyMappings();
+
+        // ВОССТАНАВЛИВАЕМ СОХРАНЕННЫЙ УРОВЕНЬ И ОЧКИ
+        currentLevel = savedLevel;
+        currentScore = savedScore;
 
         StartNewGame();
     }
 
-    void SetupCanvasInfo()
+    void SetupKeyMappings()
     {
-        Canvas canvas = FindObjectOfType<Canvas>();
-        if (canvas != null)
-        {
-            canvasRect = canvas.GetComponent<RectTransform>();
-            canvasWidth = canvasRect.rect.width;
-            canvasHeight = canvasRect.rect.height;
+        keyMappings[KeyCode.A] = (0, keyButtonA);
+        keyMappings[KeyCode.S] = (1, keyButtonS);
+        keyMappings[KeyCode.D] = (2, keyButtonD);
+        keyMappings[KeyCode.F] = (3, keyButtonF);
 
-            Debug.Log($"Canvas размер: {canvasWidth}x{canvasHeight}");
-            Debug.Log($"Зона спавна: слева {spawnLeftMargin}, справа {canvasWidth - spawnRightMargin}, сверху {spawnTopMargin}, снизу {spawnBottomMargin}");
-        }
-        else
+        for (int i = 0; i < 4; i++)
         {
-            Debug.LogError("Canvas не найден!");
+            keyPressedState[i] = false;
         }
     }
 
@@ -119,135 +117,133 @@ public class MelodyMiniGame : MonoBehaviour
         audioSource.volume = soundVolume;
     }
 
-    void SetupCamera()
-    {
-        if (Camera.main == null)
-        {
-            GameObject cameraObj = new GameObject("MainCamera");
-            cameraObj.AddComponent<Camera>();
-            cameraObj.tag = "MainCamera";
-            // НЕ добавляем AudioListener здесь!
-        }
-        else
-        {
-            // Удаляем AudioListener если он уже есть на EnergyManager
-            AudioListener[] audioListeners = FindObjectsOfType<AudioListener>();
-            if (audioListeners.Length > 1)
-            {
-                Debug.Log($"Найдено {audioListeners.Length} AudioListener. Удаляем лишние...");
-                for (int i = 1; i < audioListeners.Length; i++)
-                {
-                    if (audioListeners[i].gameObject != EnergyManager.Instance?.gameObject)
-                    {
-                        Destroy(audioListeners[i]);
-                        Debug.Log("Удален лишний AudioListener");
-                    }
-                }
-            }
-        }
-    }
-
     void AutoAssignReferences()
     {
-        if (sequenceText == null) sequenceText = GameObject.Find("SequenceText")?.GetComponent<Text>();
-        if (inputText == null) inputText = GameObject.Find("InputText")?.GetComponent<Text>();
-        if (scoreText == null) scoreText = GameObject.Find("ScoreText")?.GetComponent<Text>();
-        if (messageText == null) messageText = GameObject.Find("MessageText")?.GetComponent<Text>();
-        if (levelText == null) levelText = GameObject.Find("LevelText")?.GetComponent<Text>();
-        if (energyText == null) energyText = GameObject.Find("EnergyText")?.GetComponent<Text>();
-        if (attentionText == null) attentionText = GameObject.Find("AttentionText")?.GetComponent<Text>();
-        if (gamePanel == null) gamePanel = GameObject.Find("GamePanel");
-        if (exitButton == null) exitButton = GameObject.Find("ExitButton")?.GetComponent<Button>();
+        // Автоназначение UI элементов с улучшенным поиском
+        if (sequenceText == null)
+        {
+            sequenceText = GameObject.Find("SequenceText")?.GetComponent<Text>();
+            if (sequenceText == null) Debug.LogWarning("SequenceText не найден");
+        }
 
+        if (inputText == null)
+        {
+            inputText = GameObject.Find("InputText")?.GetComponent<Text>();
+            if (inputText == null) Debug.LogWarning("InputText не найден");
+        }
+
+        if (scoreText == null)
+        {
+            scoreText = GameObject.Find("ScoreText")?.GetComponent<Text>();
+            if (scoreText == null) Debug.LogWarning("ScoreText не найден");
+        }
+
+        if (messageText == null)
+        {
+            messageText = GameObject.Find("MessageText")?.GetComponent<Text>();
+            if (messageText == null) Debug.LogWarning("MessageText не найден");
+        }
+
+        if (levelText == null)
+        {
+            levelText = GameObject.Find("LevelText")?.GetComponent<Text>();
+            if (levelText == null) Debug.LogWarning("LevelText не найден");
+        }
+
+        if (energyText == null)
+        {
+            energyText = GameObject.Find("EnergyText")?.GetComponent<Text>();
+            if (energyText == null) Debug.LogWarning("EnergyText не найден");
+        }
+
+        if (attentionText == null)
+        {
+            attentionText = GameObject.Find("AttentionText")?.GetComponent<Text>();
+            if (attentionText == null) Debug.LogWarning("AttentionText не найден");
+        }
+
+        if (gamePanel == null)
+        {
+            gamePanel = GameObject.Find("GamePanel");
+            if (gamePanel == null) Debug.LogWarning("GamePanel не найден");
+        }
+
+        if (exitButton == null)
+        {
+            exitButton = GameObject.Find("ExitButton")?.GetComponent<Button>();
+            if (exitButton == null) Debug.LogWarning("ExitButton не найден");
+        }
+
+        // Поиск кнопок клавиш
         if (keyButtonA == null) keyButtonA = GameObject.Find("KeyButtonA")?.GetComponent<Button>();
         if (keyButtonS == null) keyButtonS = GameObject.Find("KeyButtonS")?.GetComponent<Button>();
         if (keyButtonD == null) keyButtonD = GameObject.Find("KeyButtonD")?.GetComponent<Button>();
         if (keyButtonF == null) keyButtonF = GameObject.Find("KeyButtonF")?.GetComponent<Button>();
 
-        if (pianoPanel == null) pianoPanel = GameObject.Find("PianoPanel")?.GetComponent<Image>();
-        if (mainBackground == null) mainBackground = GameObject.Find("MainBackground")?.GetComponent<Image>();
-
-        if (noteParent == null)
+        // Создаем область для отображения нот если не назначена
+        if (noteDisplayArea == null)
         {
-            noteParent = new GameObject("NoteParent").transform;
-            Canvas canvas = FindObjectOfType<Canvas>();
-            if (canvas != null)
-                noteParent.SetParent(canvas.transform);
+            CreateNoteDisplayArea();
+        }
+    }
+
+    void CreateNoteDisplayArea()
+    {
+        GameObject areaObj = new GameObject("NoteDisplayArea");
+        noteDisplayArea = areaObj.AddComponent<RectTransform>();
+
+        Canvas canvas = FindObjectOfType<Canvas>();
+        if (canvas != null)
+        {
+            noteDisplayArea.SetParent(canvas.transform);
+
+            // Настраиваем область занимающую верхние 60% экрана
+            noteDisplayArea.anchorMin = new Vector2(0.1f, 0.4f);
+            noteDisplayArea.anchorMax = new Vector2(0.9f, 0.9f);
+            noteDisplayArea.offsetMin = Vector2.zero;
+            noteDisplayArea.offsetMax = Vector2.zero;
+            noteDisplayArea.localPosition = Vector3.zero;
+            noteDisplayArea.localScale = Vector3.one;
+
+            // Добавляем Image для визуализации (можно отключить)
+            Image bg = areaObj.AddComponent<Image>();
+            bg.color = new Color(0, 1, 0, 0.1f); // Зеленая прозрачная для отладки
         }
     }
 
     void SetupKeyButtons()
     {
-        if (keyButtonA != null)
-        {
-            keyButtonA.onClick.AddListener(() => OnKeyPressed(0));
-            SetKeyButtonNormal(keyButtonA);
-        }
+        if (keyButtonA != null) keyButtonA.onClick.AddListener(() => OnKeyPressed(0));
+        if (keyButtonS != null) keyButtonS.onClick.AddListener(() => OnKeyPressed(1));
+        if (keyButtonD != null) keyButtonD.onClick.AddListener(() => OnKeyPressed(2));
+        if (keyButtonF != null) keyButtonF.onClick.AddListener(() => OnKeyPressed(3));
+        if (exitButton != null) exitButton.onClick.AddListener(ReturnToMainScene);
 
-        if (keyButtonS != null)
-        {
-            keyButtonS.onClick.AddListener(() => OnKeyPressed(1));
-            SetKeyButtonNormal(keyButtonS);
-        }
-
-        if (keyButtonD != null)
-        {
-            keyButtonD.onClick.AddListener(() => OnKeyPressed(2));
-            SetKeyButtonNormal(keyButtonD);
-        }
-
-        if (keyButtonF != null)
-        {
-            keyButtonF.onClick.AddListener(() => OnKeyPressed(3));
-            SetKeyButtonNormal(keyButtonF);
-        }
-
-        if (exitButton != null)
-        {
-            exitButton.onClick.AddListener(ReturnToMainScene);
-        }
-
-        ClearAllNotes();
-    }
-
-    void SetKeyButtonNormal(Button button)
-    {
-        if (button != null && button.image != null)
-        {
-            if (keyNormalSprite != null)
-            {
-                button.image.sprite = keyNormalSprite;
-            }
-            button.image.color = Color.white;
-        }
-    }
-
-    void SetKeyButtonPressed(Button button)
-    {
-        if (button != null && button.image != null)
-        {
-            if (keyPressedSprite != null)
-            {
-                button.image.sprite = keyPressedSprite;
-            }
-            button.image.color = keyHighlightColor;
-        }
+        SetAllKeysNormal();
     }
 
     void StartNewGame()
     {
+        // currentLevel не сбрасываем - используем сохраненное значение
         currentScore = 0;
-        currentLevel = 1;
         GenerateNewMelody();
         StartCoroutine(PlayMelodySequence());
         UpdateUI();
+
+        Debug.Log($"Начата новая игра с уровнем: {currentLevel}");
     }
 
+
+    public int GetCurrentLevel()
+    {
+        return currentLevel;
+    }
     void GenerateNewMelody()
     {
         currentMelody.Clear();
         playerInput.Clear();
 
+        // НАЧИНАЕМ С ТЕКУЩЕГО УРОВНЯ (а не с 1)
         int melodyLength = currentLevel + 2;
         for (int i = 0; i < melodyLength; i++)
         {
@@ -255,9 +251,27 @@ public class MelodyMiniGame : MonoBehaviour
         }
     }
 
+    public void ResetProgress()
+    {
+        currentLevel = 1;
+        currentScore = 0;
+        savedLevel = 1;
+        savedScore = 0;
+        Debug.Log("Прогресс пианино полностью сброшен");
+    }
+
+    public static int GetSavedLevel()
+    {
+        return savedLevel;
+    }
+
+    public static void SetSavedLevel(int level)
+    {
+        savedLevel = level;
+    }
+
     IEnumerator PlayMelodySequence()
     {
-        // Проверяем хватает ли энергии и внимания для игры
         if (EnergyManager.Instance != null && !EnergyManager.Instance.CanPlayPiano())
         {
             if (messageText != null) messageText.text = "Слишком устал! Нужно отдохнуть";
@@ -273,58 +287,57 @@ public class MelodyMiniGame : MonoBehaviour
         if (sequenceText != null) sequenceText.text = $"Последовательность из {currentMelody.Count} нот";
         if (inputText != null) inputText.text = "Ваш ввод: ";
 
-        ClearAllNotes();
+        ClearCurrentNote();
 
+        // ПОСЛЕДОВАТЕЛЬНО ПОКАЗЫВАЕМ НОТЫ В СЛУЧАЙНЫХ МЕСТАХ ВНУТРИ ОБЛАСТИ
         for (int i = 0; i < currentMelody.Count; i++)
         {
             int noteIndex = currentMelody[i];
-            Vector2 randomPosition = GetRandomSpawnPosition();
-            CreateNote(noteIndex, randomPosition);
+
+            // СОЗДАЕМ НОТУ В СЛУЧАЙНОЙ ПОЗИЦИИ ВНУТРИ ОБЛАСТИ
+            Vector2 randomPosition = GetRandomPositionInArea();
+            CreateNoteAtPosition(noteIndex, randomPosition);
             PlayNoteSound(noteIndex);
 
+            // ЖДЕМ ПОКА НОТА ПОКАЖЕТСЯ И НАЧНЕТ ИСЧЕЗАТЬ
             yield return new WaitForSeconds(noteDisplayTime);
+
+            // КОРОТКАЯ ПАУЗА МЕЖДУ НОТАМИ
             yield return new WaitForSeconds(betweenNotesTime);
         }
-
-        yield return new WaitForSeconds(noteFadeTime);
 
         isPlayingSequence = false;
         isWaitingForInput = true;
         if (messageText != null) messageText.text = "Ваша очередь! Повторите мелодию";
     }
 
-    Vector2 GetRandomSpawnPosition()
+    Vector2 GetRandomPositionInArea()
     {
-        if (canvasRect == null)
-        {
-            Debug.LogWarning("Canvas не найден, используем координаты по умолчанию");
-            return new Vector2(0, 200);
-        }
+        if (noteDisplayArea == null)
+            return Vector2.zero;
 
-        // Рассчитываем абсолютные координаты в пикселях от левого нижнего угла
-        float minX = spawnLeftMargin;
-        float maxX = canvasWidth - spawnRightMargin;
-        float minY = spawnBottomMargin;
-        float maxY = canvasHeight - spawnTopMargin;
+        // Получаем размеры области в локальных координатах
+        Rect areaRect = noteDisplayArea.rect;
 
-        // Проверяем что зона спавна валидна
-        if (minX >= maxX) minX = 50f;
-        if (minY >= maxY) minY = 200f;
+        // Рассчитываем доступную область с учетом отступов
+        float availableWidth = areaRect.width - (noteMargin * 2);
+        float availableHeight = areaRect.height - (noteMargin * 2);
 
-        float x = Random.Range(minX, maxX);
-        float y = Random.Range(minY, maxY);
+        // Генерируем случайную позицию ВНУТРИ области
+        float randomX = Random.Range(-availableWidth / 2, availableWidth / 2);
+        float randomY = Random.Range(-availableHeight / 2, availableHeight / 2);
 
-        // Конвертируем в координаты RectTransform (от центра)
-        float rectX = x - canvasWidth / 2f;
-        float rectY = y - canvasHeight / 2f;
+        Vector2 localPosition = new Vector2(randomX, randomY);
 
-        Debug.Log($"Создана нота: экран({x}, {y}), RectTransform({rectX}, {rectY})");
+        Debug.Log($"Случайная позиция в области: {localPosition}, границы: {areaRect}");
 
-        return new Vector2(rectX, rectY);
+        return localPosition;
     }
 
-    void CreateNote(int noteIndex, Vector2 position)
+    void CreateNoteAtPosition(int noteIndex, Vector2 position)
     {
+        ClearCurrentNote();
+
         if (notePrefab == null)
         {
             CreateTextNote(noteIndex, position);
@@ -335,65 +348,66 @@ public class MelodyMiniGame : MonoBehaviour
         }
     }
 
+    void CreateSpriteNote(int noteIndex, Vector2 position)
+    {
+        if (notePrefab == null) return;
+
+        currentNote = Instantiate(notePrefab, noteDisplayArea);
+        currentNote.name = $"Note_{noteIndex}";
+
+        // НАСТРАИВАЕМ ПОЗИЦИЮ - СЛУЧАЙНОЕ МЕСТО В ОБЛАСТИ
+        RectTransform rt = currentNote.GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = position; // Случайная позиция
+            rt.sizeDelta = new Vector2(120, 120);
+            rt.localScale = Vector3.one;
+        }
+
+        // УСТАНАВЛИВАЕМ СПРАЙТ НОТЫ
+        Image image = currentNote.GetComponent<Image>();
+        if (image != null)
+        {
+            Sprite noteSprite = GetNoteSprite(noteIndex);
+            if (noteSprite != null)
+            {
+                image.sprite = noteSprite;
+                image.preserveAspect = true;
+            }
+            image.color = Color.white;
+        }
+
+        // ЗАПУСКАЕМ АВТОМАТИЧЕСКОЕ ЗАТУХАНИЕ
+        StartCoroutine(AutoFadeNote(currentNote));
+    }
+
     void CreateTextNote(int noteIndex, Vector2 position)
     {
         GameObject noteObj = new GameObject($"Note_{noteIndex}");
-        noteObj.transform.SetParent(noteParent);
+        noteObj.transform.SetParent(noteDisplayArea);
 
         RectTransform rt = noteObj.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(100, 100);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = position;
+        rt.sizeDelta = new Vector2(100, 100);
 
         Text text = noteObj.AddComponent<Text>();
         text.text = GetKeyName(noteIndex);
-        text.fontSize = 48;
-        text.color = keyColors[noteIndex];
-        text.alignment = TextAnchor.MiddleCenter;
+        text.fontSize = 40;
+        text.color = Color.white;
         text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        text.alignment = TextAnchor.MiddleCenter;
 
-        Shadow shadow = noteObj.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0, 0, 0, 0.5f);
-        shadow.effectDistance = new Vector2(2, -2);
-
-        activeNotes.Add(noteObj);
-        StartCoroutine(FadeOutNote(noteObj));
+        currentNote = noteObj;
+        StartCoroutine(AutoFadeNote(currentNote));
     }
 
-    void CreateSpriteNote(int noteIndex, Vector2 position)
-    {
-        GameObject noteObj = Instantiate(notePrefab, noteParent);
-        noteObj.name = $"Note_{noteIndex}";
-
-        RectTransform rt = noteObj.GetComponent<RectTransform>();
-        if (rt != null)
-        {
-            rt.anchoredPosition = position;
-            rt.sizeDelta = new Vector2(80, 80);
-        }
-
-        Image image = noteObj.GetComponent<Image>();
-        if (image != null)
-        {
-            image.color = keyColors[noteIndex];
-        }
-
-        Text text = noteObj.GetComponentInChildren<Text>();
-        if (text != null)
-        {
-            text.text = GetKeyName(noteIndex);
-            text.color = Color.white;
-            text.fontSize = 24;
-
-            Shadow shadow = text.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0, 0, 0, 0.7f);
-            shadow.effectDistance = new Vector2(1, -1);
-        }
-
-        activeNotes.Add(noteObj);
-        StartCoroutine(FadeOutNote(noteObj));
-    }
-
-    IEnumerator FadeOutNote(GameObject noteObj)
+    IEnumerator AutoFadeNote(GameObject noteObj)
     {
         CanvasGroup canvasGroup = noteObj.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
@@ -401,10 +415,12 @@ public class MelodyMiniGame : MonoBehaviour
             canvasGroup = noteObj.AddComponent<CanvasGroup>();
         }
 
+        // ЖДЕМ ПЕРЕД НАЧАЛОМ ЗАТУХАНИЯ
         yield return new WaitForSeconds(noteDisplayTime - noteFadeTime);
 
+        // ПЛАВНОЕ ЗАТУХАНИЕ
         float timer = 0f;
-        while (timer < noteFadeTime)
+        while (timer < noteFadeTime && noteObj != null)
         {
             timer += Time.deltaTime;
             if (canvasGroup != null)
@@ -414,28 +430,24 @@ public class MelodyMiniGame : MonoBehaviour
             yield return null;
         }
 
-        if (noteObj != null)
+        // УДАЛЯЕМ НОТУ ПОСЛЕ ЗАТУХАНИЯ
+        if (noteObj != null && noteObj == currentNote)
         {
-            activeNotes.Remove(noteObj);
             Destroy(noteObj);
+            currentNote = null;
         }
     }
 
-    void ClearAllNotes()
+    void ClearCurrentNote()
     {
-        // Создаем временный список чтобы избежать ошибок при изменении коллекции
-        List<GameObject> notesToDestroy = new List<GameObject>(activeNotes);
-        activeNotes.Clear();
-
-        foreach (GameObject note in notesToDestroy)
+        if (currentNote != null)
         {
-            if (note != null)
-            {
-                Destroy(note);
-            }
+            Destroy(currentNote);
+            currentNote = null;
         }
     }
 
+    // ОСТАЛЬНЫЕ МЕТОДЫ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ
     public void OnKeyPressed(int keyIndex)
     {
         if (!isWaitingForInput || isPlayingSequence) return;
@@ -450,13 +462,9 @@ public class MelodyMiniGame : MonoBehaviour
 
     IEnumerator FlashKey(int keyIndex)
     {
-        Button button = GetKeyButton(keyIndex);
-        if (button != null)
-        {
-            SetKeyButtonPressed(button);
-            yield return new WaitForSeconds(0.3f);
-            SetKeyButtonNormal(button);
-        }
+        SetKeyButtonPressed(keyIndex);
+        yield return new WaitForSeconds(0.3f);
+        SetKeyButtonNormal(keyIndex);
     }
 
     void PlayNoteSound(int noteIndex)
@@ -480,26 +488,32 @@ public class MelodyMiniGame : MonoBehaviour
         }
     }
 
-    void PlaySound(AudioClip clip)
+    Sprite GetNoteSprite(int noteIndex)
     {
-        if (clip != null && audioSource != null)
+        switch (noteIndex)
         {
-            audioSource.PlayOneShot(clip);
+            case 0: return noteSpriteA;
+            case 1: return noteSpriteS;
+            case 2: return noteSpriteD;
+            case 3: return noteSpriteF;
+            default: return null;
         }
     }
 
     void CheckInput()
     {
+        if (EnergyManager.Instance == null)
+        {
+            Debug.LogError("EnergyManager не найден!");
+            return;
+        }
+
         for (int i = 0; i < playerInput.Count; i++)
         {
             if (playerInput[i] != currentMelody[i])
             {
-                // Неправильный ввод - тратим внимание и энергию
-                if (EnergyManager.Instance != null)
-                {
-                    EnergyManager.Instance.DrainAttentionForSequence(currentMelody.Count, true);
-                    EnergyManager.Instance.DrainEnergyForSequence(currentMelody.Count, true);
-                }
+                EnergyManager.Instance.DrainAttentionForSequence(currentMelody.Count, true);
+                EnergyManager.Instance.DrainEnergyForSequence(currentMelody.Count, true);
                 StartCoroutine(HandleWrongInput());
                 return;
             }
@@ -507,12 +521,8 @@ public class MelodyMiniGame : MonoBehaviour
 
         if (playerInput.Count == currentMelody.Count)
         {
-            // Правильный ввод - тратим внимание и энергию пропорционально длине
-            if (EnergyManager.Instance != null)
-            {
-                EnergyManager.Instance.DrainAttentionForSequence(currentMelody.Count);
-                EnergyManager.Instance.DrainEnergyForSequence(currentMelody.Count);
-            }
+            EnergyManager.Instance.DrainAttentionForSequence(currentMelody.Count);
+            EnergyManager.Instance.DrainEnergyForSequence(currentMelody.Count);
             StartCoroutine(HandleCorrectSequence());
         }
     }
@@ -521,26 +531,35 @@ public class MelodyMiniGame : MonoBehaviour
     {
         isWaitingForInput = false;
 
-        currentScore += 100 * currentLevel;
+        int scoreEarned = 100 * currentLevel;
+        currentScore += scoreEarned;
         currentLevel++;
 
-        if (messageText != null) messageText.text = $"Правильно! +{100 * currentLevel} очков!";
+        // ОБНОВЛЯЕМ ДЛИНУ ПОСЛЕДОВАТЕЛЬНОСТИ
+        currentSequenceLength = currentMelody.Count;
+
+        // СОХРАНЯЕМ ПРОГРЕСС
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.AddScore(scoreEarned);
+            GameProgressManager.Instance.UpdateMaxSequence(currentSequenceLength);
+        }
+
+        if (messageText != null) messageText.text = $"Правильно! +{scoreEarned} очков!";
         PlaySound(successSound);
 
         yield return StartCoroutine(SuccessAnimation());
         yield return new WaitForSeconds(1f);
 
-        // Проверяем не закончилось ли внимание или энергия
-        if (EnergyManager.Instance != null &&
-            EnergyManager.Instance.HasAttention() &&
-            EnergyManager.Instance.HasEnergy())
+        if (EnergyManager.Instance == null ||
+            (EnergyManager.Instance.HasAttention() && EnergyManager.Instance.HasEnergy()))
         {
             GenerateNewMelody();
             StartCoroutine(PlayMelodySequence());
         }
         else
         {
-            if (messageText != null)
+            if (messageText != null && EnergyManager.Instance != null)
             {
                 if (!EnergyManager.Instance.HasAttention())
                     messageText.text = "Внимание закончилось! Нужно отдохнуть";
@@ -571,7 +590,6 @@ public class MelodyMiniGame : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        // Проверяем внимание и энергию перед повторением
         if (EnergyManager.Instance != null &&
             EnergyManager.Instance.HasAttention() &&
             EnergyManager.Instance.HasEnergy())
@@ -610,11 +628,70 @@ public class MelodyMiniGame : MonoBehaviour
     {
         for (int i = 0; i < 4; i++)
         {
-            Button button = GetKeyButton(i);
             if (pressed)
-                SetKeyButtonPressed(button);
+                SetKeyButtonPressed(i);
             else
-                SetKeyButtonNormal(button);
+                SetKeyButtonNormal(i);
+        }
+    }
+
+    void SetKeyButtonNormal(int keyIndex)
+    {
+        Button button = GetKeyButton(keyIndex);
+        if (button != null && button.image != null)
+        {
+            Sprite normalSprite = GetKeyNormalSprite(keyIndex);
+            if (normalSprite != null)
+            {
+                button.image.sprite = normalSprite;
+            }
+        }
+        keyPressedState[keyIndex] = false;
+    }
+
+    void SetKeyButtonPressed(int keyIndex)
+    {
+        Button button = GetKeyButton(keyIndex);
+        if (button != null && button.image != null)
+        {
+            Sprite pressedSprite = GetKeyPressedSprite(keyIndex);
+            if (pressedSprite != null)
+            {
+                button.image.sprite = pressedSprite;
+            }
+        }
+        keyPressedState[keyIndex] = true;
+    }
+
+    void SetAllKeysNormal()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            SetKeyButtonNormal(i);
+        }
+    }
+
+    Sprite GetKeyNormalSprite(int keyIndex)
+    {
+        switch (keyIndex)
+        {
+            case 0: return keyNormalA;
+            case 1: return keyNormalS;
+            case 2: return keyNormalD;
+            case 3: return keyNormalF;
+            default: return null;
+        }
+    }
+
+    Sprite GetKeyPressedSprite(int keyIndex)
+    {
+        switch (keyIndex)
+        {
+            case 0: return keyPressedA;
+            case 1: return keyPressedS;
+            case 2: return keyPressedD;
+            case 3: return keyPressedF;
+            default: return null;
         }
     }
 
@@ -642,7 +719,6 @@ public class MelodyMiniGame : MonoBehaviour
         if (levelText != null) levelText.text = "Уровень: " + currentLevel;
         if (sequenceText != null) sequenceText.text = "Длина: " + currentMelody.Count + " нот";
 
-        // Обновляем отображение энергии и внимания
         if (EnergyManager.Instance != null)
         {
             if (energyText != null)
@@ -674,57 +750,62 @@ public class MelodyMiniGame : MonoBehaviour
         }
     }
 
+    void PlaySound(AudioClip clip)
+    {
+        if (clip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
+    }
+
     public void ReturnToMainScene()
     {
-        Debug.Log("Возвращаемся в главную сцену...");
+        ClearCurrentNote();
 
-        // ОЧИЩАЕМ ВСЕ НОТЫ ПЕРЕД ВЫХОДОМ
-        ClearAllNotesImmediately();
+        // СОХРАНЯЕМ ТЕКУЩИЙ УРОВЕНЬ И ОЧКИ ПЕРЕД ВЫХОДОМ
+        savedLevel = currentLevel;
+        savedScore = currentScore;
+        Debug.Log($"Сохранен уровень: {savedLevel}, очки: {savedScore}");
 
-        // Показываем UI EnergyManager
+        // ВАЖНО: Сохраняем данные в GameProgressManager перед выходом
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.SaveData();
+            GameProgressManager.Instance.RefreshAfterMinigame(); // ОБНОВЛЯЕМ UI
+            Debug.Log("Данные прогресса сохранены при выходе из пианино");
+        }
+
+        // УВЕДОМЛЯЕМ ENERGY MANAGER О ВЫХОДЕ
         if (EnergyManager.Instance != null)
         {
-            EnergyManager.Instance.ShowUI();
+            EnergyManager.Instance.OnExitPianoMinigame();
         }
 
         SceneManager.LoadScene("MainScene");
     }
 
-    // Добавляем метод для немедленной очистки всех нот
-    void ClearAllNotesImmediately()
-    {
-        Debug.Log($"Очищаем все ноты перед выходом. Активных нот: {activeNotes.Count}");
-
-        foreach (GameObject note in activeNotes)
-        {
-            if (note != null)
-            {
-                DestroyImmediate(note); // Немедленное уничтожение
-            }
-        }
-        activeNotes.Clear();
-
-        // Дополнительная очистка на всякий случай
-        Note2D[] allNotes = FindObjectsOfType<Note2D>();
-        foreach (Note2D note in allNotes)
-        {
-            if (note != null && note.gameObject != null)
-            {
-                DestroyImmediate(note.gameObject);
-            }
-        }
-
-        Debug.Log("Все ноты очищены");
-    }
 
     void Update()
     {
         if (isWaitingForInput && !isPlayingSequence)
         {
-            if (Input.GetKeyDown(KeyCode.A)) OnKeyPressed(0);
-            if (Input.GetKeyDown(KeyCode.S)) OnKeyPressed(1);
-            if (Input.GetKeyDown(KeyCode.D)) OnKeyPressed(2);
-            if (Input.GetKeyDown(KeyCode.F)) OnKeyPressed(3);
+            foreach (var mapping in keyMappings)
+            {
+                if (Input.GetKeyDown(mapping.Key))
+                {
+                    int keyIndex = mapping.Value.index;
+                    if (!keyPressedState[keyIndex])
+                    {
+                        OnKeyPressed(keyIndex);
+                    }
+                }
+
+                if (Input.GetKeyUp(mapping.Key))
+                {
+                    int keyIndex = mapping.Value.index;
+                    SetKeyButtonNormal(keyIndex);
+                }
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -732,7 +813,6 @@ public class MelodyMiniGame : MonoBehaviour
             ReturnToMainScene();
         }
 
-        // Постоянно обновляем UI для отображения изменений энергии
         UpdateUI();
     }
 }

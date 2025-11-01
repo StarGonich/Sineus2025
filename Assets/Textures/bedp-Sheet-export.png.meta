@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: f2851264b2c184c4b9dc4a487ac0db91
+guid: 1bdefcfac5c6bcc4b82a35e74f3a1ffa
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -33,7 +33,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -47,7 +47,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 15
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -93,13 +93,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_0
+      name: bedp-Sheet-export_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -107,20 +107,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 16f83ed7f0a89444eb66228984609546
-      internalID: 1768486716
+      spriteID: 57a7c5971e9106749b8c83c435816da8
+      internalID: 451316230
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_1
+      name: bedp-Sheet-export_1
       rect:
         serializedVersion: 2
-        x: 61
+        x: 288
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,20 +128,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: e88cc424d07de194da041ef81a3614d7
-      internalID: 1096977419
+      spriteID: 27f5c12cea071404a8735c4e2dfee0e7
+      internalID: -1297442348
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_2
+      name: bedp-Sheet-export_2
       rect:
         serializedVersion: 2
-        x: 122
+        x: 576
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -149,20 +149,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: eef724caaa87d9148b2eaa609f2acd3f
-      internalID: -879690915
+      spriteID: 71ed376879d88d942a2fdd82373bc70b
+      internalID: -1317140571
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_3
+      name: bedp-Sheet-export_3
       rect:
         serializedVersion: 2
-        x: 183
+        x: 864
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -170,20 +170,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 95b47d26fe6a45d43a86ed02a8827474
-      internalID: 1319550279
+      spriteID: 745c22ebc0b43c643975f143bcd81423
+      internalID: 1891072787
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_4
+      name: bedp-Sheet-export_4
       rect:
         serializedVersion: 2
-        x: 244
+        x: 1152
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -191,20 +191,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7802a1279b994614a9ed73c72dd50efa
-      internalID: -511201614
+      spriteID: 9b1061187c2d0a64ca1bc5384455b9ef
+      internalID: 1304903514
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_5
+      name: bedp-Sheet-export_5
       rect:
         serializedVersion: 2
-        x: 305
+        x: 1440
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -212,20 +212,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9a4173c33dcea6749baa7a4de78d856b
-      internalID: -299978059
+      spriteID: 0aa139feac2fc464eb72ad6374575aa3
+      internalID: -251208981
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: brr bbr patapim-Sheet_6
+      name: bedp-Sheet-export_6
       rect:
         serializedVersion: 2
-        x: 366
+        x: 1728
         y: 0
-        width: 61
-        height: 60
+        width: 288
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -233,71 +233,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4b8da4b0d39dcda4a9e2db3e1ab6ff2d
-      internalID: 835444466
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: brr bbr patapim-Sheet_7
-      rect:
-        serializedVersion: 2
-        x: 427
-        y: 0
-        width: 61
-        height: 60
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c53a38b37af0e5245abf2a30547afe62
-      internalID: -1955342105
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: brr bbr patapim-Sheet_8
-      rect:
-        serializedVersion: 2
-        x: 488
-        y: 0
-        width: 61
-        height: 60
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: a56d1ffb64e1cef4193c0023bb0f12b8
-      internalID: 453682026
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: brr bbr patapim-Sheet_9
-      rect:
-        serializedVersion: 2
-        x: 549
-        y: 0
-        width: 61
-        height: 60
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ea0f6207c7004f2498b73dd2359a8509
-      internalID: -2080356100
+      spriteID: 041e60e941792604187c4553b647435d
+      internalID: -707971094
       vertices: []
       indices: 
       edges: []
@@ -305,7 +242,7 @@ TextureImporter:
     outline: []
     physicsShape: []
     bones: []
-    spriteID: 139efd1c8a732a94ea94d66b93d9d4fb
+    spriteID: 53b0bd9eb15855a4bb16d9c08f526255
     internalID: 0
     vertices: []
     indices: 
@@ -313,16 +250,13 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      brr bbr patapim-Sheet_0: 1768486716
-      brr bbr patapim-Sheet_1: 1096977419
-      brr bbr patapim-Sheet_2: -879690915
-      brr bbr patapim-Sheet_3: 1319550279
-      brr bbr patapim-Sheet_4: -511201614
-      brr bbr patapim-Sheet_5: -299978059
-      brr bbr patapim-Sheet_6: 835444466
-      brr bbr patapim-Sheet_7: -1955342105
-      brr bbr patapim-Sheet_8: 453682026
-      brr bbr patapim-Sheet_9: -2080356100
+      bedp-Sheet-export_0: 451316230
+      bedp-Sheet-export_1: -1297442348
+      bedp-Sheet-export_2: -1317140571
+      bedp-Sheet-export_3: 1891072787
+      bedp-Sheet-export_4: 1304903514
+      bedp-Sheet-export_5: -251208981
+      bedp-Sheet-export_6: -707971094
   spritePackingTag: 
   pSDRemoveMatte: 0
   pSDShowRemoveMatteOption: 0

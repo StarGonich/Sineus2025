@@ -1,4 +1,3 @@
-// LaptopInteractable.cs
 using UnityEngine;
 
 public class NotebookInteractable : InteractiveObject
@@ -7,12 +6,12 @@ public class NotebookInteractable : InteractiveObject
     {
         interactionName = "Ноутбук";
         animationTrigger = "UseLaptop"; // Название триггера анимации работы с ноутбуком
-        attentionGainRate = 12f;
+        attentionGainRate = 1f;
     }
 
-    protected override void EndInteraction()
+    protected override void EndInteractionImmediately()
     {
-        base.EndInteraction();
-        Debug.Log("Работа за ноутбуком завершена. Внимание восстановлено!");
+        base.EndInteractionImmediately();
+        Debug.Log("Поработал за ноутбуком - внимание восстановлено!");
     }
 }
