@@ -815,30 +815,19 @@ public class MelodyMiniGame : MonoBehaviour
         }
     }
 
-    public void ReturnToMainScene()
+    void ReturnToMainScene()
     {
-        ClearCurrentNote();
+        string mainSceneName = "MainScene"; // Замени на имя твоей основной сцены
 
-        // СОХРАНЯЕМ ТЕКУЩИЙ УРОВЕНЬ И ОЧКИ ПЕРЕД ВЫХОДОМ
-        savedLevel = currentLevel;
-        savedScore = currentScore;
-        Debug.Log($"Сохранен уровень: {savedLevel}, очки: {savedScore}");
-
-        // ВАЖНО: Сохраняем данные в GameProgressManager перед выходом
+        // Показываем панель завершения дня в основной сцене
         if (GameProgressManager.Instance != null)
         {
-            GameProgressManager.Instance.SaveData();
-            GameProgressManager.Instance.RefreshAfterMinigame(); // ОБНОВЛЯЕМ UI
-            Debug.Log("Данные прогресса сохранены при выходе из пианино");
-        }
+            // Загружаем основную сцену и показываем панель
+            SceneManager.LoadScene(mainSceneName);
 
-        // УВЕДОМЛЯЕМ ENERGY MANAGER О ВЫХОДЕ
-        if (EnergyManager.Instance != null)
-        {
-            EnergyManager.Instance.OnExitPianoMinigame();
+            // Используем корутину чтобы показать панель после загрузки сцены
+            StartCoroutine(ShowPanelAfterSceneLoad());
         }
-
-        SceneManager.LoadScene("MainScene");
     }
 
     void Update()
@@ -878,5 +867,45 @@ public class MelodyMiniGame : MonoBehaviour
         }
 
         UpdateUI();
+        CheckEnergyDuringGame();
+
+        // Горячая клавиша для завершения дня
+        if (Input.GetKeyDown(KeyCode.Backspace))
+        {
+            ShowEndDayPanelAndExit();
+        }
+    }
+
+    void CheckEnergyDuringGame()
+    {
+        if (EnergyManager.Instance != null && !EnergyManager.Instance.HasEnergy())
+        {
+            Debug.Log("Энергия закончилась во время игры!");
+            ShowEndDayPanelAndExit();
+        }
+    }
+
+    void ShowEndDayPanelAndExit()
+    {
+        // Сохраняем прогресс перед выходом
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.SaveData();
+        }
+
+        // Возвращаемся в основную сцену
+        ReturnToMainScene();
+    }
+
+    System.Collections.IEnumerator ShowPanelAfterSceneLoad()
+    {
+        // Ждем завершения загрузки сцены
+        yield return new WaitForSeconds(0.5f);
+
+        // Показываем панель завершения дня
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.ShowEndDayPanel();
+        }
     }
 }
