@@ -32,12 +32,10 @@ public class EnergyManager : MonoBehaviour
     public Color attentionFullColor = Color.blue;
     public Color attentionLowColor = Color.yellow;
 
-
     private bool isGainingAttention = false;
     private float currentAttentionGainRate = 0f;
 
     public static EnergyManager Instance;
-
 
     void Awake()
     {
@@ -62,7 +60,55 @@ public class EnergyManager : MonoBehaviour
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         Debug.Log($"EnergyManager: Загружена сцена {scene.name}");
+        FindUIReferences();
         UpdateProgressBars();
+    }
+
+    void FindUIReferences()
+    {
+        // Ищем UI элементы на сцене, если они не установлены в инспекторе
+        if (energyProgressBar == null)
+        {
+            GameObject energyBarObj = GameObject.Find("EnergyBar");
+            if (energyBarObj != null)
+            {
+                energyProgressBar = energyBarObj.GetComponent<Slider>();
+                Debug.Log("EnergyBar найден на сцене");
+            }
+        }
+
+        if (attentionProgressBar == null)
+        {
+            GameObject attentionBarObj = GameObject.Find("AttentionBar");
+            if (attentionBarObj != null)
+            {
+                attentionProgressBar = attentionBarObj.GetComponent<Slider>();
+                Debug.Log("AttentionBar найден на сцене");
+            }
+        }
+
+        if (energyText == null)
+        {
+            GameObject energyTextObj = GameObject.Find("EnergyText");
+            if (energyTextObj != null)
+            {
+                energyText = energyTextObj.GetComponent<Text>();
+                Debug.Log("EnergyText найден на сцене");
+            }
+        }
+
+        if (attentionText == null)
+        {
+            GameObject attentionTextObj = GameObject.Find("AttentionText");
+            if (attentionTextObj != null)
+            {
+                attentionText = attentionTextObj.GetComponent<Text>();
+                Debug.Log("AttentionText найден на сцене");
+            }
+        }
+
+        // Настраиваем найденные прогресс-бары
+        SetupProgressBars();
     }
 
     void SetupProgressBars()
@@ -74,7 +120,9 @@ public class EnergyManager : MonoBehaviour
             energyProgressBar.maxValue = maxEnergy;
             energyProgressBar.value = currentEnergy;
             energyProgressBar.interactable = false;
-            SetupProgressBarColors(energyProgressBar, energyFullColor, energyLowColor);
+
+            // Убедимся, что прогресс-бар видим
+            energyProgressBar.gameObject.SetActive(true);
         }
 
         if (attentionProgressBar != null)
@@ -83,25 +131,9 @@ public class EnergyManager : MonoBehaviour
             attentionProgressBar.maxValue = maxAttention;
             attentionProgressBar.value = currentAttention;
             attentionProgressBar.interactable = false;
-            SetupProgressBarColors(attentionProgressBar, attentionFullColor, attentionLowColor);
-        }
-    }
 
-    void SetupProgressBarColors(Slider progressBar, Color fullColor, Color lowColor)
-    {
-        // Находим Fill изображение и меняем цвет
-        Transform fillArea = progressBar.transform.Find("Fill Area");
-        if (fillArea != null)
-        {
-            Transform fill = fillArea.Find("Fill");
-            if (fill != null)
-            {
-                Image fillImage = fill.GetComponent<Image>();
-                if (fillImage != null)
-                {
-                    fillImage.color = fullColor;
-                }
-            }
+            // Убедимся, что прогресс-бар видим
+            attentionProgressBar.gameObject.SetActive(true);
         }
     }
 
@@ -111,14 +143,22 @@ public class EnergyManager : MonoBehaviour
         if (energyProgressBar != null)
         {
             energyProgressBar.value = currentEnergy;
-            UpdateProgressBarColor(energyProgressBar, currentEnergy / maxEnergy, energyFullColor, energyLowColor);
+        }
+        else
+        {
+            // Если прогресс-бар потерян, пытаемся найти его снова
+            FindUIReferences();
         }
 
         // Обновляем прогресс-бар внимания
         if (attentionProgressBar != null)
         {
             attentionProgressBar.value = currentAttention;
-            UpdateProgressBarColor(attentionProgressBar, currentAttention / maxAttention, attentionFullColor, attentionLowColor);
+        }
+        else
+        {
+            // Если прогресс-бар потерян, пытаемся найти его снова
+            FindUIReferences();
         }
 
         // Обновляем текстовую информацию
@@ -139,23 +179,6 @@ public class EnergyManager : MonoBehaviour
         }
     }
 
-    void UpdateProgressBarColor(Slider progressBar, float percent, Color fullColor, Color lowColor)
-    {
-        Transform fillArea = progressBar.transform.Find("Fill Area");
-        if (fillArea != null)
-        {
-            Transform fill = fillArea.Find("Fill");
-            if (fill != null)
-            {
-                Image fillImage = fill.GetComponent<Image>();
-                if (fillImage != null)
-                {
-                    fillImage.color = Color.Lerp(lowColor, fullColor, percent);
-                }
-            }
-        }
-    }
-
     void InitializeResources()
     {
         currentEnergy = maxEnergy;
@@ -168,13 +191,13 @@ public class EnergyManager : MonoBehaviour
     System.Collections.IEnumerator InitializeUIAfterDelay()
     {
         yield return new WaitForSeconds(0.1f);
-        SetupProgressBars();
+        FindUIReferences();
         UpdateProgressBars();
     }
 
     void Start()
     {
-        SetupProgressBars();
+        FindUIReferences();
         UpdateProgressBars();
     }
 
@@ -221,6 +244,27 @@ public class EnergyManager : MonoBehaviour
         Debug.Log("Восстановление внимания остановлено");
     }
 
+    public void DrainEnergy(float amount)
+    {
+        currentEnergy = Mathf.Max(0, currentEnergy - amount);
+        UpdateProgressBars();
+
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.SaveData();
+        }
+
+        if (currentEnergy <= 0)
+        {
+            ShowEnergyDepletedWarning();
+            // Автоматически показываем панель завершения дня
+            if (GameProgressManager.Instance != null)
+            {
+                GameProgressManager.Instance.ShowEndDayPanel();
+            }
+        }
+    }
+
     public void DrainEnergyForSequence(int sequenceLength, bool failed = false)
     {
         float drainAmount = failed ? energyDrainOnFail : sequenceLength * energyDrainPerNote;
@@ -251,22 +295,38 @@ public class EnergyManager : MonoBehaviour
     public void RestoreAttentionFull()
     {
         currentAttention = maxAttention;
-        UpdateUI();
+        UpdateProgressBars();
         HideTiredWarning();
     }
 
     public void RestoreEnergy(float amount)
     {
-        currentEnergy = Mathf.Min(maxEnergy, currentEnergy + amount);
+        if (amount > 0)
+        {
+            // Восстановление энергии
+            currentEnergy = Mathf.Min(maxEnergy, currentEnergy + amount);
+        }
+        else
+        {
+            // Трата энергии (отрицательное значение)
+            currentEnergy = Mathf.Max(0, currentEnergy + amount); // amount отрицательное, поэтому складываем
+        }
 
-        UpdateProgressBars(); // ОБНОВЛЯЕМ ПРОГРЕСС-БАР
+        UpdateProgressBars();
 
         if (GameProgressManager.Instance != null)
         {
             GameProgressManager.Instance.SaveData();
         }
 
-        HideEnergyDepletedWarning();
+        if (currentEnergy <= 0)
+        {
+            ShowEnergyDepletedWarning();
+        }
+        else
+        {
+            HideEnergyDepletedWarning();
+        }
     }
 
     void ShowTiredWarning()
@@ -305,8 +365,7 @@ public class EnergyManager : MonoBehaviour
 
     void UpdateUI()
     {
-        // Обновление UI теперь должно обрабатываться внешними системами
-        // Этот метод оставлен для совместимости
+        UpdateProgressBars();
     }
 
     void Update()
@@ -328,6 +387,10 @@ public class EnergyManager : MonoBehaviour
     public void OnExitPianoMinigame()
     {
         Debug.Log("EnergyManager: Выход из мини-игры пианино");
+
+        // Принудительно находим и настраиваем прогресс-бары после выхода из мини-игры
+        FindUIReferences();
+        UpdateProgressBars();
 
         // Просто вызываем обновление, без сложной логики
         if (GameProgressManager.Instance != null)
@@ -358,12 +421,24 @@ public class EnergyManager : MonoBehaviour
 
     public bool IsAttentionFull()
     {
-        return Mathf.Approximately(currentAttention, maxAttention) || currentAttention >= maxAttention;
+        return currentAttention >= maxAttention;
     }
 
     public bool CanInteractWithObjects()
     {
         return !IsAttentionFull() && HasEnergy();
+    }
+
+    public void ForceUpdateUI()
+    {
+        FindUIReferences();
+        UpdateProgressBars();
+
+        // Обновляем текстовые значения
+        if (energyText != null)
+            energyText.text = $"{Mathf.RoundToInt(currentEnergy)}/{Mathf.RoundToInt(maxEnergy)}";
+        if (attentionText != null)
+            attentionText.text = $"{Mathf.RoundToInt(currentAttention)}/{Mathf.RoundToInt(maxAttention)}";
     }
 
     public void ResetAllResources()
@@ -380,12 +455,12 @@ public class EnergyManager : MonoBehaviour
     public void ResetEnergy()
     {
         currentEnergy = maxEnergy;
-        UpdateUI();
+        UpdateProgressBars();
     }
 
     public void ResetAttention()
     {
         currentAttention = maxAttention;
-        UpdateUI();
+        UpdateProgressBars();
     }
 }

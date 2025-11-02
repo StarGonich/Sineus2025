@@ -18,6 +18,17 @@ public abstract class Interactable : MonoBehaviour
 
     public virtual void Interact()
     {
+        // ÎÁÙÀß ÏĞÎÂÅĞÊÀ ÄËß ÂÑÅÕ ÂÇÀÈÌÎÄÅÉÑÒÂÈÉ
+        if (EnergyManager.Instance != null && !EnergyManager.Instance.HasEnergy())
+        {
+            Debug.Log("İíåğãèÿ çàêîí÷èëàñü! Äåíü çàâåğøåí.");
+            if (GameProgressManager.Instance != null)
+            {
+                GameProgressManager.Instance.ShowEndDayPanel();
+            }
+            return;
+        }
+
         isInteracting = true;
         Debug.Log($"Started interacting with {interactionName}");
     }

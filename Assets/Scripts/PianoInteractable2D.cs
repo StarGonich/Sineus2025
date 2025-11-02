@@ -23,9 +23,23 @@ public class PianoInteractable2D : Interactable
             return;
         }
 
+        // ДЛЯ ПИАНИНО ПРОВЕРЯЕМ, ЧТО ЕСТЬ ЭНЕРГИЯ И ВНИМАНИЕ (обратная логика)
         if (!energyManager.HasEnergy())
         {
             Debug.Log("Слишком устал для игры на пианино!");
+            return;
+        }
+
+        if (!energyManager.HasAttention())
+        {
+            Debug.Log("Слишком устал для концентрации на пианино!");
+            return;
+        }
+
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: достаточно ли ресурсов для хотя бы одной ноты
+        if (!energyManager.CanPlayPiano())
+        {
+            Debug.Log("Недостаточно энергии или внимания для игры на пианино!");
             return;
         }
 

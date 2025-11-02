@@ -15,6 +15,7 @@ public abstract class InteractiveObject : Interactable
 
     public override void Interact()
     {
+        // Убираем проверку на полное внимание - теперь разрешаем взаимодействие
         if (EnergyManager.Instance != null && !EnergyManager.Instance.HasEnergy())
         {
             Debug.Log("Энергия закончилась! День завершен.");
@@ -25,18 +26,15 @@ public abstract class InteractiveObject : Interactable
             return;
         }
 
-        if (EnergyManager.Instance.GetCurrentAttention() >= EnergyManager.Instance.maxAttention)
-        {
-            Debug.Log("Внимание полностью восстановлено - взаимодействие невозможно");
-            return;
-        }
-
+      
+        // Оставляем только проверку на отсутствие энергии
         if (!EnergyManager.Instance.HasEnergy())
         {
             Debug.Log("Слишком устал для этого!");
             return;
         }
 
+        // Только если все проверки пройдены - начинаем взаимодействие
         base.Interact();
         StartInteraction();
     }
@@ -101,7 +99,8 @@ public abstract class InteractiveObject : Interactable
     {
         Debug.Log("Начало взаимодействия");
 
-        EnergyManager.Instance.StartGainingAttention(attentionGainRate);
+        bool wasGainingAttention = false;
+        bool wasDrainingEnergy = false;
 
         while (isInteracting)
         {
@@ -111,13 +110,53 @@ public abstract class InteractiveObject : Interactable
                 break;
             }
 
-            if (EnergyManager.Instance.GetCurrentAttention() >= EnergyManager.Instance.maxAttention)
+            // ЛОГИКА ВЗАИМОДЕЙСТВИЯ:
+            if (EnergyManager.Instance.GetCurrentAttention() < EnergyManager.Instance.maxAttention)
             {
-                Debug.Log("Внимание полностью восстановлено");
-                break;
+                // 1. ВОССТАНАВЛИВАЕМ ВНИМАНИЕ, если оно не полное
+                if (!wasGainingAttention)
+                {
+                    EnergyManager.Instance.StartGainingAttention(attentionGainRate);
+                    wasGainingAttention = true;
+                    wasDrainingEnergy = false;
+                    Debug.Log("Начато восстановление внимания");
+                }
+            }
+            else
+            {
+                // 2. КОГДА ВНИМАНИЕ ПОЛНОЕ - ТРАТИМ ЭНЕРГИЮ
+                if (!wasDrainingEnergy)
+                {
+                    EnergyManager.Instance.StopGainingAttention();
+                    wasGainingAttention = false;
+                    wasDrainingEnergy = true;
+                    Debug.Log("Внимание полное, начинаем тратить энергию");
+                }
+
+                // Тратим энергию с той же скоростью, что и восстанавливали внимание
+                float energyDrainRate = attentionGainRate * 0.5f; // Настраиваемый множитель
+                float energyToDrain = energyDrainRate * Time.deltaTime;
+                EnergyManager.Instance.RestoreEnergy(-energyToDrain); // Отрицательное значение = трата
+
+                // Проверяем, не закончилась ли энергия
+                if (!EnergyManager.Instance.HasEnergy())
+                {
+                    Debug.Log("Энергия закончилась во время взаимодействия");
+                    if (GameProgressManager.Instance != null)
+                    {
+                        GameProgressManager.Instance.ShowEndDayPanel();
+                    }
+                    break;
+                }
             }
 
             yield return null;
+        }
+
+        // ОСТАНАВЛИВАЕМ ВСЕ ПРОЦЕССЫ ПРИ ВЫХОДЕ
+        if (wasGainingAttention)
+        {
+            EnergyManager.Instance.StopGainingAttention();
         }
 
         EndInteractionImmediately();

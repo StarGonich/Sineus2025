@@ -297,6 +297,7 @@ public class PenguinController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.E) && currentInteractable != null && !isInteracting)
         {
+
             StartInteraction(currentInteractable);
         }
 
@@ -309,6 +310,33 @@ public class PenguinController : MonoBehaviour
         {
             ToggleCursorLock();
         }
+    }
+
+    public void OnRespawn()
+    {
+        // Сбрасываем все состояния движения
+        movement = Vector3.zero;
+        currentVelocity = Vector3.zero;
+        isMoving = false;
+        isRunning = false;
+
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        // Сбрасываем анимацию
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", 0f);
+        }
+
+        // Восстанавливаем управление
+        isInteracting = false;
+        isCameraFixed = false;
+
+        Debug.Log("PenguinController: состояние сброшено после респавна");
     }
 
     void StartInteraction(Interactable interactable)

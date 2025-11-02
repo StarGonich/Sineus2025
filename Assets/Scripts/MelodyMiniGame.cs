@@ -224,6 +224,15 @@ public class MelodyMiniGame : MonoBehaviour
 
     void StartNewGame()
     {
+        // ПРОВЕРКА ПРИ СТАРТЕ: если внимание 0, сразу выходим
+        if (EnergyManager.Instance != null && EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            Debug.Log("Внимание полностью истощено - выход из пианино");
+            if (messageText != null) messageText.text = "Слишком устал для концентрации!";
+            StartCoroutine(ExitDueToNoAttention());
+            return;
+        }
+
         // currentLevel не сбрасываем - используем сохраненное значение
         currentScore = 0;
         GenerateNewMelody();
@@ -233,6 +242,11 @@ public class MelodyMiniGame : MonoBehaviour
         Debug.Log($"Начата новая игра с уровнем: {currentLevel}");
     }
 
+    IEnumerator ExitDueToNoAttention()
+    {
+        yield return new WaitForSeconds(1.5f);
+        ReturnToMainScene();
+    }
 
     public int GetCurrentLevel()
     {
@@ -272,10 +286,19 @@ public class MelodyMiniGame : MonoBehaviour
 
     IEnumerator PlayMelodySequence()
     {
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: если внимание 0, выходим
+        if (EnergyManager.Instance != null && EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            if (messageText != null) messageText.text = "Внимание закончилось! Нужно отдохнуть";
+            yield return new WaitForSeconds(1.5f);
+            ReturnToMainScene();
+            yield break;
+        }
+
         if (EnergyManager.Instance != null && !EnergyManager.Instance.CanPlayPiano())
         {
             if (messageText != null) messageText.text = "Слишком устал! Нужно отдохнуть";
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(1.5f);
             ReturnToMainScene();
             yield break;
         }
@@ -293,6 +316,15 @@ public class MelodyMiniGame : MonoBehaviour
         for (int i = 0; i < currentMelody.Count; i++)
         {
             int noteIndex = currentMelody[i];
+
+            // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА В ПРОЦЕССЕ: если внимание стало 0, прерываем
+            if (EnergyManager.Instance != null && EnergyManager.Instance.GetCurrentAttention() <= 0)
+            {
+                if (messageText != null) messageText.text = "Внимание закончилось во время игры!";
+                yield return new WaitForSeconds(1f);
+                ReturnToMainScene();
+                yield break;
+            }
 
             // СОЗДАЕМ НОТУ В СЛУЧАЙНОЙ ПОЗИЦИИ ВНУТРИ ОБЛАСТИ
             Vector2 randomPosition = GetRandomPositionInArea();
@@ -452,6 +484,14 @@ public class MelodyMiniGame : MonoBehaviour
     {
         if (!isWaitingForInput || isPlayingSequence) return;
 
+        // ПРОВЕРКА ПРИ НАЖАТИИ КЛАВИШИ: если внимание 0, выходим
+        if (EnergyManager.Instance != null && EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            if (messageText != null) messageText.text = "Внимание закончилось!";
+            StartCoroutine(ExitDueToNoAttention());
+            return;
+        }
+
         playerInput.Add(keyIndex);
         StartCoroutine(FlashKey(keyIndex));
         PlayNoteSound(keyIndex);
@@ -508,6 +548,14 @@ public class MelodyMiniGame : MonoBehaviour
             return;
         }
 
+        // ПРОВЕРКА ПРИ ПРОВЕРКЕ ВВОДА: если внимание 0, выходим
+        if (EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            if (messageText != null) messageText.text = "Внимание закончилось!";
+            StartCoroutine(ExitDueToNoAttention());
+            return;
+        }
+
         for (int i = 0; i < playerInput.Count; i++)
         {
             if (playerInput[i] != currentMelody[i])
@@ -551,22 +599,27 @@ public class MelodyMiniGame : MonoBehaviour
         yield return StartCoroutine(SuccessAnimation());
         yield return new WaitForSeconds(1f);
 
-        if (EnergyManager.Instance == null ||
-            (EnergyManager.Instance.HasAttention() && EnergyManager.Instance.HasEnergy()))
+        // ПРОВЕРКА ПЕРЕД СЛЕДУЮЩИМ УРОВНЕМ: если внимание 0, выходим
+        if (EnergyManager.Instance == null || EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            if (messageText != null) messageText.text = "Внимание закончилось! Нужно отдохнуть";
+            yield return new WaitForSeconds(1.5f);
+            ReturnToMainScene();
+            yield break;
+        }
+
+        if (EnergyManager.Instance.HasEnergy())
         {
             GenerateNewMelody();
             StartCoroutine(PlayMelodySequence());
         }
         else
         {
-            if (messageText != null && EnergyManager.Instance != null)
+            if (messageText != null)
             {
-                if (!EnergyManager.Instance.HasAttention())
-                    messageText.text = "Внимание закончилось! Нужно отдохнуть";
-                else
-                    messageText.text = "Энергия закончилась! Нужно отдохнуть";
+                messageText.text = "Энергия закончилась! Нужно отдохнуть";
             }
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(1.5f);
             ReturnToMainScene();
         }
 
@@ -590,9 +643,16 @@ public class MelodyMiniGame : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        if (EnergyManager.Instance != null &&
-            EnergyManager.Instance.HasAttention() &&
-            EnergyManager.Instance.HasEnergy())
+        // ПРОВЕРКА ПЕРЕД ПОВТОРОМ: если внимание 0, выходим
+        if (EnergyManager.Instance != null && EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            if (messageText != null) messageText.text = "Внимание закончилось! Нужно отдохнуть";
+            yield return new WaitForSeconds(1.5f);
+            ReturnToMainScene();
+            yield break;
+        }
+
+        if (EnergyManager.Instance.HasEnergy())
         {
             playerInput.Clear();
             StartCoroutine(PlayMelodySequence());
@@ -601,12 +661,9 @@ public class MelodyMiniGame : MonoBehaviour
         {
             if (messageText != null)
             {
-                if (!EnergyManager.Instance.HasAttention())
-                    messageText.text = "Внимание закончилось! Нужно отдохнуть";
-                else
-                    messageText.text = "Энергия закончилась! Нужно отдохнуть";
+                messageText.text = "Энергия закончилась! Нужно отдохнуть";
             }
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(1.5f);
             ReturnToMainScene();
         }
 
@@ -784,9 +841,16 @@ public class MelodyMiniGame : MonoBehaviour
         SceneManager.LoadScene("MainScene");
     }
 
-
     void Update()
     {
+        // ПРОВЕРКА В КАЖДОМ КАДРЕ: если внимание стало 0, выходим
+        if (EnergyManager.Instance != null && EnergyManager.Instance.GetCurrentAttention() <= 0)
+        {
+            if (messageText != null) messageText.text = "Внимание закончилось!";
+            StartCoroutine(ExitDueToNoAttention());
+            return;
+        }
+
         if (isWaitingForInput && !isPlayingSequence)
         {
             foreach (var mapping in keyMappings)

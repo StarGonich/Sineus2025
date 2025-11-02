@@ -8,16 +8,29 @@ public class MelodyPianoInteractable : Interactable
 
     public override void Interact()
     {
+        // ИСПРАВЛЕНИЕ: при нулевой энергии показываем окно завершения дня
         if (!EnergyManager.Instance.HasEnergy())
         {
-            Debug.Log("Слишком устал для игры на пианино!");
+            Debug.Log("Энергия закончилась! День завершен.");
+            if (GameProgressManager.Instance != null)
+            {
+                GameProgressManager.Instance.ShowEndDayPanel();
+            }
             return;
         }
 
-        base.Interact();
+        // ДЛЯ ПИАНИНО: проверяем что внимание ЕСТЬ (больше 0)
+        if (EnergyManager.Instance.GetCurrentAttention() > 0)
+        {
+            Debug.Log("Запуск мини-игры на пианино");
 
-        // Переходим в сцену мини-игры
-        SceneManager.LoadScene(melodySceneName);
+            // Переходим в сцену мини-игры
+            SceneManager.LoadScene(melodySceneName);
+        }
+        else
+        {
+            Debug.Log("Слишком устал для концентрации на пианино! Внимание: " + EnergyManager.Instance.GetCurrentAttention());
+        }
     }
 
     public override void StartMiniGame()

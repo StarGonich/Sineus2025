@@ -47,6 +47,11 @@ public class GameProgressManager : MonoBehaviour
     public Text energyText;
     public Text attentionText;
 
+    [Header("Fallback UI Resources")]
+    public Sprite backgroundSprite;
+    public Sprite uiSprite;
+    public Font minecraftFont;
+
     // СИНГЛТОН ДЛЯ СОХРАНЕНИЯ ДАННЫХ
     private static GameProgressManager _instance;
 
@@ -408,14 +413,15 @@ public class GameProgressManager : MonoBehaviour
         {
             if (endDayMessage != null)
             {
-                string message = $"День {currentDay} завершен!\n\n";
+                string message = $"День {currentDay} завершен!\n\n";  // Используем currentDay (текущий день)
                 message += $"Очков сегодня: {currentDayScore}\n";
                 message += $"Всего очков: {totalScore}/{targetTotalScore}\n";
                 message += $"Максимальная последовательность: {maxSequenceLength}\n\n";
 
+                // ИСПРАВЛЕНИЕ: правильная проверка на последний день
                 if (currentDay < totalDays)
                 {
-                    message += $"Завершить день {currentDay} и перейти к следующему?";
+                    message += $"Завершить день {currentDay} и перейти к дню {currentDay + 1}?";
                 }
                 else
                 {
@@ -459,16 +465,24 @@ public class GameProgressManager : MonoBehaviour
             PenguinController.Instance.FixCamera(false);
         }
 
+        // ИСПРАВЛЕНИЕ: сохраняем текущий день до увеличения
         int completedDay = currentDay;
-        currentDay++;
 
-        if (currentDay > totalDays)
+        // Увеличиваем день ТОЛЬКО если это не последний день
+        if (currentDay < totalDays)
+        {
+            currentDay++;
+        }
+
+        // Проверяем, был ли это последний день
+        if (completedDay >= totalDays)  // Используем completedDay вместо currentDay
         {
             Debug.Log("ПОСЛЕДНИЙ ДЕНЬ ЗАВЕРШЕН! Показываем концовку...");
             ShowEndingScreen();
         }
         else
         {
+            // Сбрасываем дневные очки и последовательность только для НОВОГО дня
             currentDayScore = 0;
             maxSequenceLength = 0;
 
@@ -482,8 +496,24 @@ public class GameProgressManager : MonoBehaviour
                 Debug.Log("Энергия восстановлена для нового дня");
             }
 
+            // Респавн игрока
             RespawnPlayer();
+
+            // Обновляем UI
+            StartCoroutine(RefreshUIAfterRespawn());
         }
+    }
+
+    System.Collections.IEnumerator RefreshUIAfterRespawn()
+    {
+        yield return new WaitForSeconds(0.5f);
+        UpdateUI();
+
+        //// Принудительно обновляем прогресс-бары энергии
+        //if (energyManager != null)
+        //{
+        //    energyManager.UpdateUI();
+        //}
     }
 
     void RespawnPlayer()
@@ -493,12 +523,20 @@ public class GameProgressManager : MonoBehaviour
         GameObject player = GameObject.FindGameObjectWithTag(playerTag);
         if (player != null && playerRespawnPoint != null)
         {
+            // Вызываем метод респавна у контроллера
+            PenguinController penguinController = player.GetComponent<PenguinController>();
+            if (penguinController != null)
+            {
+                penguinController.OnRespawn();
+            }
+
             CharacterController controller = player.GetComponent<CharacterController>();
             if (controller != null)
             {
                 controller.enabled = false;
             }
 
+            // ТЕЛЕПОРТАЦИЯ
             player.transform.position = playerRespawnPoint.position;
             player.transform.rotation = playerRespawnPoint.rotation;
 
@@ -508,11 +546,21 @@ public class GameProgressManager : MonoBehaviour
             }
 
             Debug.Log($"Игрок перемещен к точке респавна: {playerRespawnPoint.position}");
+
+            // ОБНОВЛЯЕМ UI
+            StartCoroutine(DelayedUIUpdate());
         }
         else
         {
             Debug.LogWarning("Игрок или точка респавна не найдены!");
+            FindRespawnPoint();
         }
+    }
+
+    System.Collections.IEnumerator DelayedUIUpdate()
+    {
+        yield return new WaitForSeconds(0.1f);
+        UpdateUI();
     }
 
     void ShowEndingScreen()
@@ -685,26 +733,32 @@ public class GameProgressManager : MonoBehaviour
 
     void SetupEndingScreenContent(bool goodEnding)
     {
-        // Настраиваем фон (спрайт)
+        // Настраиваем фон EndingScreen
         if (endingBackground != null)
         {
             if (goodEnding && goodEndingSprite != null)
             {
                 endingBackground.sprite = goodEndingSprite;
                 endingBackground.color = Color.white;
+                endingBackground.type = Image.Type.Simple;
+                endingBackground.preserveAspect = false; // Растягиваем на весь экран
             }
             else if (!goodEnding && badEndingSprite != null)
             {
                 endingBackground.sprite = badEndingSprite;
                 endingBackground.color = Color.white;
+                endingBackground.type = Image.Type.Simple;
+                endingBackground.preserveAspect = false;
             }
             else
             {
-                endingBackground.color = goodEnding ? new Color(0.1f, 0.5f, 0.1f, 0.95f) : new Color(0.5f, 0.1f, 0.1f, 0.95f);
+                // Если нет специальных спрайтов, используем цветной фон
+                endingBackground.sprite = null;
+                endingBackground.color = goodEnding ? new Color(0.1f, 0.5f, 0.1f, 1f) : new Color(0.5f, 0.1f, 0.1f, 1f);
             }
         }
 
-        // Настраиваем текст
+        // Настраиваем текст (остается без изменений)
         if (endingTitle != null)
         {
             endingTitle.text = goodEnding ? "🎉 Поздравляем! 🎉" : "😔 Попробуйте еще раз";
@@ -714,8 +768,8 @@ public class GameProgressManager : MonoBehaviour
         if (endingDescription != null)
         {
             string description = goodEnding ?
-                "Вы успешно сдали экзамен по игре на пианино!\nВаше усердие и практика принесли отличные результаты.\n\n" :
-                "Вам нужно больше практики...\nНе сдавайтесь, продолжайте тренироваться!\n\n";
+                "Счастливый конец!\nПингвиненок стал суперзвездой в мире пионистов благодаря своим усилиям:3\n\n" :
+                "Возможно, стоило приложить чуть побольше усилий.\nПингвиненок оскуфился и опикселел\n\n";
 
             description += $"Итоговый счет: {totalScore}/{targetTotalScore}\n";
             description += $"Максимальная последовательность: {maxSequenceLength}\n";
@@ -731,6 +785,7 @@ public class GameProgressManager : MonoBehaviour
             }
 
             endingDescription.text = description;
+            endingDescription.color = Color.white;
         }
     }
 
@@ -745,7 +800,7 @@ public class GameProgressManager : MonoBehaviour
             canvas = FindObjectOfType<Canvas>();
         }
 
-        // Создаем основную панель концовки (EndingPanel)
+        // Создаем основную панель концовки (EndingPanel) - как в префабе
         GameObject endingPanel = new GameObject("EndingPanel_Fallback");
         createdEndingScreen = endingPanel;
         endingPanel.transform.SetParent(canvas.transform);
@@ -758,9 +813,14 @@ public class GameProgressManager : MonoBehaviour
         // Фон панели как в префабе
         Image panelImage = endingPanel.AddComponent<Image>();
         panelImage.color = new Color(1, 1, 1, 0.3764706f);
-        panelImage.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Background.psd");
 
-        // Создаем EndingScreen как дочерний объект
+        if (backgroundSprite != null)
+        {
+            panelImage.sprite = backgroundSprite;
+        }
+        
+
+        // Создаем EndingScreen как дочерний объект - ЭТО БУДЕТ НАШ ФОН С ИЗОБРАЖЕНИЕМ
         GameObject endingScreenObj = new GameObject("EndingScreen");
         endingScreenObj.transform.SetParent(endingPanel.transform);
         RectTransform screenRt = endingScreenObj.AddComponent<RectTransform>();
@@ -769,59 +829,107 @@ public class GameProgressManager : MonoBehaviour
         screenRt.offsetMin = Vector2.zero;
         screenRt.offsetMax = Vector2.zero;
 
-        // Фон EndingScreen
+        // Фон EndingScreen - устанавливаем изображение концовки
         Image screenImage = endingScreenObj.AddComponent<Image>();
+
+        // Устанавливаем спрайт в зависимости от типа концовки
         if (goodEnding && goodEndingSprite != null)
         {
             screenImage.sprite = goodEndingSprite;
             screenImage.color = Color.white;
-            screenImage.type = Image.Type.Simple;
-            screenImage.preserveAspect = true;
         }
         else if (!goodEnding && badEndingSprite != null)
         {
             screenImage.sprite = badEndingSprite;
             screenImage.color = Color.white;
-            screenImage.type = Image.Type.Simple;
-            screenImage.preserveAspect = true;
+        }
+        else if (backgroundSprite != null)
+        {
+            // Используем общий спрайт фона если нет специальных спрайтов концовки
+            screenImage.sprite = backgroundSprite;
+            screenImage.color = Color.white;
         }
         else
         {
-            screenImage.color = goodEnding ? new Color(0.1f, 0.5f, 0.1f, 0.95f) : new Color(0.5f, 0.1f, 0.1f, 0.95f);
+            // Цветной фон если нет спрайтов
+            screenImage.color = goodEnding ? new Color(0.1f, 0.5f, 0.1f, 1f) : new Color(0.5f, 0.1f, 0.1f, 1f);
         }
+
+        screenImage.type = Image.Type.Simple;
+        screenImage.preserveAspect = false; // Растягиваем на весь экран
 
         endingBackground = screenImage;
 
-        // Заголовок
+        // Создаем Text панель (аналог Text из префаба) - ПОЛУПРОЗРАЧНАЯ ПАНЕЛЬ ПОВЕРХ ФОНА
+        GameObject textPanel = new GameObject("Text");
+        textPanel.transform.SetParent(endingScreenObj.transform); // Помещаем поверх EndingScreen
+        RectTransform textPanelRt = textPanel.AddComponent<RectTransform>();
+        textPanelRt.anchorMin = new Vector2(0.5f, 0.5f);
+        textPanelRt.anchorMax = new Vector2(0.5f, 0.5f);
+        textPanelRt.anchoredPosition = Vector2.zero;
+        textPanelRt.sizeDelta = new Vector2(900, 600);
+
+        // Фон Text панели - полупрозрачный черный для лучшей читаемости текста
+        Image textPanelImage = textPanel.AddComponent<Image>();
+        textPanelImage.color = new Color(0, 0, 0, 0.392f);
+
+        if (uiSprite != null)
+        {
+            textPanelImage.sprite = uiSprite;
+            textPanelImage.type = Image.Type.Sliced;
+        }
+       
+
+        // Заголовок EndingTitle - как в префабе
         GameObject titleObj = new GameObject("EndingTitle");
-        titleObj.transform.SetParent(endingScreenObj.transform);
+        titleObj.transform.SetParent(textPanel.transform);
         RectTransform titleRt = titleObj.AddComponent<RectTransform>();
         titleRt.anchorMin = new Vector2(0.5f, 0.5f);
         titleRt.anchorMax = new Vector2(0.5f, 0.5f);
-        titleRt.anchoredPosition = new Vector2(0, 0);
-        titleRt.sizeDelta = new Vector2(503.7708f, 232.2234f);
+        titleRt.anchoredPosition = new Vector2(0, 110f);
+        titleRt.sizeDelta = new Vector2(500f, 200f);
 
         Text titleText = titleObj.AddComponent<Text>();
         titleText.text = goodEnding ? "🎉 Поздравляем! 🎉" : "😔 Попробуйте еще раз";
-        titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        if (minecraftFont != null)
+        {
+            titleText.font = minecraftFont;
+            Debug.Log("Шрифт minecraft используется");
+        }
+        else
+        {
+            Font loadedFont = Resources.Load<Font>("minecraft");
+            if (loadedFont != null)
+            {
+                titleText.font = loadedFont;
+                Debug.Log("Шрифт minecraft загружен из Resources");
+            }
+            else
+            {
+                titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                Debug.LogWarning("Шрифт minecraft не найден, используется Arial");
+            }
+        }
+
         titleText.fontSize = 40;
-        titleText.color = goodEnding ? Color.yellow : Color.white;
+        titleText.color = Color.white;
         titleText.alignment = TextAnchor.MiddleCenter;
         endingTitle = titleText;
 
-        // Описание
+        // Описание EndingDescription - как в префабе
         GameObject descObj = new GameObject("EndingDescription");
-        descObj.transform.SetParent(endingScreenObj.transform);
+        descObj.transform.SetParent(textPanel.transform);
         RectTransform descRt = descObj.AddComponent<RectTransform>();
         descRt.anchorMin = new Vector2(0.5f, 0.5f);
         descRt.anchorMax = new Vector2(0.5f, 0.5f);
-        descRt.anchoredPosition = new Vector2(0, -171.5f);
-        descRt.sizeDelta = new Vector2(854.0159f, 342.9971f);
+        descRt.anchoredPosition = new Vector2(0, -170f);
+        descRt.sizeDelta = new Vector2(850f, 300f);
 
         Text descText = descObj.AddComponent<Text>();
         string description = goodEnding ?
-            "Вы успешно сдали экзамен по игре на пианино!\nВаше усердие и практика принесли отличные результаты.\n\n" :
-            "Вам нужно больше практики...\nНе сдавайтесь, продолжайте тренироваться!\n\n";
+            "Счастливый конец!\nПингвиненок стал суперзвездой в мире пионистов благодаря своим усилиям:3\n\n" :
+            "Возможно, стоило приложить чуть побольше усилий.\nПингвиненок оскуфился и опикселел\n\n";
 
         description += $"Итоговый счет: {totalScore}/{targetTotalScore}\n";
         description += $"Максимальная последовательность: {maxSequenceLength}\n";
@@ -837,28 +945,52 @@ public class GameProgressManager : MonoBehaviour
         }
 
         descText.text = description;
-        descText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        descText.fontSize = 24;
+
+        if (minecraftFont != null)
+        {
+            descText.font = minecraftFont;
+        }
+        else
+        {
+            Font loadedFont = Resources.Load<Font>("minecraft");
+            if (loadedFont != null)
+            {
+                descText.font = loadedFont;
+            }
+            else
+            {
+                descText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
+        }
+
+        descText.fontSize = 40;
         descText.color = Color.white;
         descText.alignment = TextAnchor.MiddleCenter;
         endingDescription = descText;
 
-        // Кнопка выхода
+        // Кнопка выхода ExitGameButton - как в префабе
         GameObject exitObj = new GameObject("ExitGameButton");
-        exitObj.transform.SetParent(endingScreenObj.transform);
+        exitObj.transform.SetParent(endingScreenObj.transform); // Помещаем прямо в EndingScreen (поверх фона)
         RectTransform exitRt = exitObj.AddComponent<RectTransform>();
         exitRt.anchorMin = new Vector2(0.5f, 0.5f);
         exitRt.anchorMax = new Vector2(0.5f, 0.5f);
-        exitRt.anchoredPosition = new Vector2(0, -533f);
-        exitRt.sizeDelta = new Vector2(351.5979f, 85.4526f);
+        exitRt.anchoredPosition = new Vector2(0, -400);
+        exitRt.sizeDelta = new Vector2(350f, 85f);
 
         Image exitImage = exitObj.AddComponent<Image>();
         exitImage.color = Color.white;
-        exitImage.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+
+        if (uiSprite != null)
+        {
+            exitImage.sprite = uiSprite;
+        }
+        
+
+        exitImage.type = Image.Type.Sliced;
         exitGameButton = exitObj.AddComponent<Button>();
 
-        // Текст кнопки
-        GameObject exitTextObj = new GameObject("ButtonText");
+        // Текст кнопки ExitGameButton
+        GameObject exitTextObj = new GameObject("Text (TMP)");
         exitTextObj.transform.SetParent(exitObj.transform);
         RectTransform exitTextRt = exitTextObj.AddComponent<RectTransform>();
         exitTextRt.anchorMin = Vector2.zero;
@@ -867,10 +999,27 @@ public class GameProgressManager : MonoBehaviour
         exitTextRt.offsetMax = Vector2.zero;
 
         Text exitText = exitTextObj.AddComponent<Text>();
-        exitText.text = "Выйти из игры";
-        exitText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        exitText.fontSize = 20;
-        exitText.color = Color.black;
+        exitText.text = "Выйти";
+
+        if (minecraftFont != null)
+        {
+            exitText.font = minecraftFont;
+        }
+        else
+        {
+            Font loadedFont = Resources.Load<Font>("minecraft");
+            if (loadedFont != null)
+            {
+                exitText.font = loadedFont;
+            }
+            else
+            {
+                exitText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
+        }
+
+        exitText.fontSize = 40;
+        exitText.color = new Color(0.1960784f, 0.1960784f, 0.1960784f, 1f);
         exitText.alignment = TextAnchor.MiddleCenter;
 
         // Сохраняем ссылки
@@ -883,7 +1032,7 @@ public class GameProgressManager : MonoBehaviour
             exitGameButton.onClick.AddListener(ExitGame);
         }
 
-        Debug.Log("Резервный экран концовки создан с полной структурой EndingPanel");
+        Debug.Log("Резервный экран концовки создан с изображением на заднем фоне");
 
         // Показываем экран
         endingPanel.SetActive(true);
